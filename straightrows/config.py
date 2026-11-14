@@ -10,6 +10,7 @@ DATA = ROOT / "data"
 TELEMETRY = DATA / "farm" / "tractor_telemetry.csv.gz"
 SPACE_FEEDS = DATA / "sda"
 LABELS = DATA / "labels" / "train_episodes.json"
+VALIDATOR = ROOT / "submission" / "validate_submission.py"
 
 # Where run.py writes each window's detections
 OUTPUT = {"dev": ROOT / "dev_predictions.json", "eval": ROOT / "submission.json"}
