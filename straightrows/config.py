@@ -113,3 +113,7 @@ BAD_CROSS_TRACK_ERROR_M = 0.50
 WEAK_MEAN_DROP_DB = 3.0
 # Bad minutes this close together join into one episode. learned
 MAX_GAP_MIN = 3
+
+# Cause test settings
+# Look this far before an episode for signal flicker (S4) readings. fixed
+FLICKER_LOOKBACK_MIN = 15
