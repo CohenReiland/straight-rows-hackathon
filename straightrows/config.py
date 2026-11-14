@@ -10,9 +10,16 @@ DATA = ROOT / "data"
 TELEMETRY = DATA / "farm" / "tractor_telemetry.csv.gz"
 SPACE_FEEDS = DATA / "sda"
 LABELS = DATA / "labels" / "train_episodes.json"
+VALIDATOR = ROOT / "submission" / "validate_submission.py"
 
 # Where run.py writes each window's detections
 OUTPUT = {"dev": ROOT / "dev_predictions.json", "eval": ROOT / "submission.json"}
+# Each tractor's normal and the cutoffs, rewritten every run (D18)
+THRESHOLDS = ROOT / "thresholds.json"
+
+# Who is submitting: GitHub username only, never email or student ID. fixed
+PARTICIPANT = {"github_handle": "CohenReiland"}
+REPOSITORY_URL = "https://github.com/CohenReiland/straight-rows-hackathon"
 
 # Time windows, start included and end left out. fixed (README)
 WINDOWS = {
@@ -113,3 +120,17 @@ BAD_CROSS_TRACK_ERROR_M = 0.50
 WEAK_MEAN_DROP_DB = 3.0
 # Bad minutes this close together join into one episode. learned
 MAX_GAP_MIN = 3
+
+# Cause test settings
+# Look this far before an episode for signal flicker (S4) readings. fixed
+FLICKER_LOOKBACK_MIN_S4 = 15
+# Episodes this many minutes or shorter are short (multipath). fixed
+SHORT_EPISODE_MIN = 3
+# The signal is healthy if the average stayed within this much of normal. learned
+HEALTHY_MAX_DROP_DB = 3.0
+# The fleet is fine if the other tractors dropped less than this. learned
+FLEET_OK_DROP_DB = 2.5
+# Signal flicker (S4) at or above this means a storm. fixed 
+HIGH_FLICKER_S4 = 0.3
+# Causes that stay on one tractor and never join across tractors. fixed (guide)
+ONE_TRACTOR_CAUSES = ["EQUIPMENT_FAULT", "MULTIPATH"]
