@@ -174,7 +174,7 @@ STRONG_FLICKER_S4 = 0.5
 ADVISORY_LEAD_IN_H = 48
 # Interference reports arrive late: count them up to this long after the start
 REPORT_MAX_DELAY_MIN = 60
-# ...and this far outside the report's area, in km. fixed (judgment)
+# This far outside the report's area, in km. fixed (judgment)
 REPORT_EXTRA_KM = 5
 EARTH_RADIUS_KM = 6371.0
 # Confidence starts at the floor and reaches the signs cap when every sign is

@@ -204,6 +204,61 @@ def space_weather_signs(rows: pd.DataFrame, feeds: dict) -> list[dict]:
     ]
 
 
+# Signs for jamming: several tractors lose signal at once without a space storm.
+def jamming_signs(rows: pd.DataFrame, feeds: dict) -> list[dict]:
+    # Times, tractors, and nearby interference reports
+    start = rows["start"].min()
+    tractors = sorted(rows["tractor"].unique())
+    reports = nearby_reports(
+        feeds["interference_reports"], start, rows["lat"].mean(), rows["lon"].mean()
+    )
+
+    # During a storm, the sign is a further drop on top of it on every tractor
+    stepped = sorted(rows.loc[rows["kind"] == "step", "tractor"].unique())
+    if stepped:
+        storm_sign = sign(
+            "for",
+            len(stepped) >= 2 and stepped == tractors,
+            "signal dropped further on top of the space storm, on every tractor "
+            "at once",
+            f"average signal fell at least {config.STEP_RISE_DB:.0f} dB below its "
+            f"level over the {config.STEP_LOOKBACK_MIN} min before, on "
+            f"{', '.join(stepped)}",
+        )
+    # Otherwise, the sign is flicker staying low, which rules out a storm
+    else:
+        flicker = rows["signal_flicker_s4_max"].max()
+        storm_sign = sign(
+            "for",
+            flicker < config.HIGH_FLICKER_S4,
+            "satellite signals not flickering, which rules out a space storm",
+            f"highest signal flicker (S4) {flicker:.2f} near the start, "
+            f"storm level is {config.HIGH_FLICKER_S4} or more",
+        )
+
+    return [
+        sign(
+            "for",
+            len(tractors) >= 2,
+            "several tractors hit at once",
+            ", ".join(tractors),
+        ),
+        storm_sign,
+        sign(
+            "bonus",
+            reports,
+            "interference report nearby",
+            describe_reports(reports, start)
+            + (
+                ""
+                if reports
+                else "; reports are often missing, so this is not "
+                "counted against jamming"
+            ),
+        ),
+    ]
+
+
 # Turn the signs into a confidence between the floor and the cap.
 def confidence(signs: list[dict]) -> float:
     # Count the signs for, the bonus signs seen, and the signs against
