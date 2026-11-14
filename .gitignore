@@ -6,3 +6,6 @@ CLAUDE.md
 
 # Pipeline output for the dev window, rebuilt every run
 dev_predictions.json
+
+# Each tractor's normal and the cutoffs, rewritten every run (D18)
+thresholds.json
