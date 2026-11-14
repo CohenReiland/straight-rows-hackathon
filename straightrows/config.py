@@ -120,6 +120,12 @@ BAD_CROSS_TRACK_ERROR_M = 0.50
 WEAK_MEAN_DROP_DB = 3.0
 # Bad minutes this close together join into one episode. learned
 MAX_GAP_MIN = 3
+# A dip is the weakest satellite this far under its normal for the moment. fixed
+DIP_DROP_DB = 5.0
+# Seconds around each second used for that normal (its median). fixed
+DIP_NORMAL_WINDOW_S = 120
+# Shortest dip reported as multipath, to stay under 500 detections. fixed
+MIN_DIP_S = 10
 
 # Cause test settings
 # Look this far before an episode for signal flicker (S4) readings. fixed
