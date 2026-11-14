@@ -54,6 +54,19 @@ def test_label_only_on_its_tractors():
     assert table["signal_mean_normal_db"].iloc[0] == 42.0
 
 
+# Eval-day minutes never set the normal, but still get a drop from it.
+def test_normal_skips_eval_day():
+    rows = [minute("T1", "12:00"), minute("T1", "12:01")]
+    for time in ["12:00", "12:01", "12:02"]:
+        eval_minute = pd.Timestamp(f"2026-05-06T{time}Z")
+        rows.append({**minute("T1", time), "minute": eval_minute, "signal_mean_db": 20.0})
+    table = add_drop_from_normal(pd.DataFrame(rows), labels())
+
+    # Counting the eval minute would pull the normal below 45
+    assert (table["signal_mean_normal_db"] == 45.0).all()
+    assert table["signal_mean_drop_db"].iloc[-1] == 25.0
+
+
 # The fleet value leaves out the tractor itself and parked tractors.
 def test_fleet_leaves_out_self_and_parked():
     rows = [

@@ -57,8 +57,11 @@ def in_labeled_episode(minutes: pd.DataFrame, labels: pd.DataFrame) -> pd.Series
 
 # Add how far each minute is below its tractor's normal.
 def add_drop_from_normal(minutes: pd.DataFrame, labels: pd.DataFrame) -> pd.DataFrame:
-    # Get each tractor's normal values from its working minutes outside labeled episodes
-    usable = minutes["working"] & ~in_labeled_episode(minutes, labels)
+    # Get each tractor's normal values from calm dev minutes: working, inside the dev
+    # window, and outside labeled episodes. The eval day never sets the normal
+    dev_start, dev_end = config.WINDOWS["dev"]
+    in_dev = (minutes["minute"] >= dev_start) & (minutes["minute"] < dev_end)
+    usable = minutes["working"] & in_dev & ~in_labeled_episode(minutes, labels)
     working_minutes = minutes[usable]
     normal_signal_mean = working_minutes.groupby("tractor_id")["signal_mean_db"].median()
     normal_signal_weakest = working_minutes.groupby("tractor_id")["signal_weakest_db"].median()

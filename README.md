@@ -1,181 +1,137 @@
-# Straight Rows Hackathon — Student Package
+# Straight Rows: GNSS Degradation Attribution
 
-**Bluestaq University Programs, in partnership with North Dakota State University**
+This is a Python pipeline for the Bluestaq × NDSU Straight Rows hackathon. It reads 72 hours of GNSS telemetry from three tractors and five space domain awareness (SDA) feeds. For the evaluation day it finds each degraded episode and names the cause and the operator action. It then writes `submission.json` with a confidence and evidence for each detection.
 
-Read `docs/Bluestaq_NDSU_Straight_Rows_Hackathon_Official.pdf` first. It is the
-**official event guide**. This package is released at kickoff for an
-individual competition with a 24-hour build, from Friday, November 13 at 4:00 pm
-CT to Saturday, November 14 at 4:00 pm CT. Submissions close at 4:00 pm Saturday
-(hour 24); demos and judging follow. Participation is restricted to NDSU undergraduate students
-who are U.S. citizens. Any language, internet resources, and AI coding assistants
-are allowed; collaboration between competitors is prohibited.
+The pipeline uses rules for each cause, not a trained model. Twelve labeled episodes are too few to train on, and rules can be explained and changed live. The official guide is `docs/Bluestaq_NDSU_Straight_Rows_Hackathon_Official.pdf`. The Bluestaq starter files (`data/`, `submission/`, `notebooks/`, `docs/`, `scripts/get_data.py`) are left as they came.
 
-> “My tractor is drifting. Is it the Sun, an adversary, or my own hardware?”
+## 1. Setup and Run
 
-Build a working system that detects degraded precision guidance, attributes its
-cause using farm telemetry and Space Domain Awareness (SDA) context, and
-recommends actions with evidence an operator can check. Causes can overlap.
-
-## Quickstart
-
-Use Python 3.11 or newer. From this package's root:
+You need Python 3.11 or newer. It was built and tested on Python 3.13 on Windows. From the repo root, run:
 
 ```bash
 python -m venv .venv
-# macOS/Linux:
-source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
+source .venv/bin/activate          # Windows PowerShell: .venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-python submission/baseline.py --data data --output submission.json \
-  --github-handle YOUR_GITHUB_USERNAME \
-  --repo-url https://github.com/YOUR_GITHUB_USERNAME/YOUR_SOLUTION_REPO
-python submission/validate_submission.py submission.json
+python scripts/get_data.py         # downloads the dataset into data/ and checks its SHA-256
 ```
 
-Use your real GitHub username and the private repository where you are
-building your solution. **Submissions are public: never put your email address
-or student ID in `submission.json`.** The validator rejects them, along with
-template placeholders. A valid baseline is
-only a starting point: improve its detections, recommendations, confidence, and
-evidence. Validation checks format, not correctness.
+The pinned dependencies in `requirements.txt` are the official starter's: `numpy==2.3.3`, `pandas==2.3.3`, `matplotlib==3.10.6`. If you already have the package ZIP, run `python scripts/get_data.py --zip StraightRows_Student_Package.zip` instead.
 
-For the optional interactive notebook:
+This command regenerates the submitted results. It writes `submission.json` for 2026-05-06 and runs the official validator on it:
 
 ```bash
-python -m pip install "jupyterlab>=4,<5"
-cd notebooks
-jupyter lab starter_notebook.ipynb
+python run.py --window eval
 ```
 
-The notebook loads all feeds, plots development episodes, and calls the same
-baseline script. It intentionally ignores S4, RFI reports, advisories, and
-multipath. The baseline identifies six of the eight evaluation episodes in the
-organizer benchmark; detailed private results are withheld from competitors.
+To check the rules, run `python run.py --window dev`. It writes `dev_predictions.json` for 2026-05-04 and 2026-05-05 and scores it against the 12 labels. The runs take about 20 and 30 seconds, and the same data always gives the same file. Every run also writes `thresholds.json` with each tractor's normal and the cutoffs.
 
-## Package contents
+## 2. Tests
 
-```text
-README.md
-requirements.txt
-docs/Bluestaq_NDSU_Straight_Rows_Hackathon_Official.pdf
-data/farm/tractor_telemetry.csv.gz
-data/sda/sgi_indices.json
-data/sda/scintillation_series.json
-data/sda/constellation_advisories.json
-data/sda/rfi_reports.json
-data/labels/train_episodes.json
-notebooks/starter_notebook.ipynb
-submission/baseline.py
-submission/submission_template.json
-submission/validate_submission.py
+The tests are plain Python with small made-up cases, so they need neither pytest nor the data. There are 65 tests in 9 files under `tests/`, and you run each file by name:
+
+```bash
+python -m tests.test_load        # also: test_mask, test_features, test_segment, test_group,
+                                 # test_attribute, test_decide, test_evidence, test_score
 ```
 
-## Simulated timeline
+`tests/test_decide.py` prints three `warning:` lines on purpose.
 
-Scenario epoch: **2026-05-04T00:00:00Z**. These are simulated dates,
-not the actual event dates.
+## 3. Demo Page
 
-- Development: hours 0–48, with 12 labeled episodes.
-- Evaluation: **2026-05-06T00:00:00Z through 2026-05-07T00:00:00Z**, with
-  eight unlabeled episodes. Only this window is scored.
-- Three machines work approximately 06:00–22:00 local time
-  (11:00Z–03:00Z) and park overnight.
-- Scored guidance episodes concern working tractors. Poor reception while
-  parked alone is not a scored guidance event.
-- Retrospective processing of the full evaluation window is allowed. Episode
-  onset accuracy is not a measurement of online detection latency.
+The demo page walks through the data, the rules, the development check, the evaluation results, one deep dive, and the limits. It only draws what the pipeline already decided.
 
-## Farm telemetry
+```bash
+python -m pip install -r requirements-demo.txt   # plotly==7.1.0
+python run.py --window dev
+python run.py --window eval
+python -m demo.serve                             # then open http://localhost:8000
+```
 
-The compressed CSV has **777,600 rows**: 72 hours × 3 tractors × 1 Hz.
+`python -m demo.serve` builds `demo/data/` first, then serves the page. It works offline, since Plotly is served from the installed package. If port 8000 is taken, use `python -m demo.serve --port 8001`.
 
-| Column                | Meaning                                                                             |
-| --------------------- | ----------------------------------------------------------------------------------- |
-| `ts`                  | UTC timestamp                                                                       |
-| `tractor_id`          | `T1`, `T2`, or `T3`                                                                 |
-| `lat`, `lon`          | Reported GNSS position; can be displaced during spoofing                            |
-| `speed_mps`           | 4.5 while working, 0 while parked                                                   |
-| `cross_track_error_m` | Deviation from the intended line, supplied by a separate simulated guidance monitor |
-| `num_sats`            | Satellites used in the navigation solution                                          |
-| `mean_cn0_dbhz`       | Mean carrier-to-noise ratio across tracked satellites                               |
-| `min_cn0_dbhz`        | Weakest tracked signal; individual satellite measurements are not supplied          |
-| `fix_state`           | `RTK_FIXED`, `RTK_FLOAT`, `DGPS`, `AUTONOMOUS`, or `NO_FIX`                         |
-| `base_link_ok`        | Whether the RTK correction link is available                                        |
+## 4. Approach
 
-The guidance monitor is an idealized simulated measurement, not a claim that a
-real GNSS receiver independently knows its true cross-track error. Reported
-position is not trusted ground truth. Real deployments would need independent
-position or inertial checks.
+The 8 stages live in `straightrows/` and run in order from `run.py`. Every cutoff is in `straightrows/config.py`. Each one is marked **fixed** (from the guide, the scorer, or a standard level) or **learned** (picked from the development data).
 
-## SDA feeds
+- **Prepare:** load the data and summarize each minute.
+  - `s1_load.py` reads the telemetry and the five feeds. Then `s2_mask.py` marks working rows, so parked rows are never scored.
+  - `s3_features.py` compares each minute with the tractor's own normal and with the worst other tractor. The normal is the median of calm development minutes, which are working and outside every label. The evaluation day never sets the normal.
+- **Find:** turn bad minutes into candidate episodes (`s4_segment.py`, `s5_group.py`).
+  - A minute is bad when the weakest satellite is more than 13 dB below normal or the tractor is more than 0.50 m off its row. A fix below `RTK_FIXED` with the link up is also bad.
+  - Bad minutes up to 3 minutes apart join into one episode. The edges then stretch up to 30 minutes, while the average signal stays 3 dB or more below normal.
+  - A short dip is the weakest satellite falling 5 dB under its 2-minute median for at least 7 seconds.
+  - A drift is a run of 3-minute blocks at least 1 m off the row, with a spread under 0.3 m.
+  - A step is the average signal falling 5 dB below its last 30 minutes, on top of an episode.
+- **Explain:** test the causes and write the evidence (`s6_attribute.py`, `s7_decide.py`, `evidence.py`, `s8_emit.py`).
 
-- `sgi_indices.json`: three-hourly **Kp** and hourly **Dst**. The synthetic
-  storm profile is inspired by public measurements of the May 2024 Gannon
-  storm; it is not an exact archival replay.
-- `scintillation_series.json`: a 15-minute regional **S4** proxy, lagging Kp.
-  Compare it with actual farm impact rather than assuming identical timing.
-- `constellation_advisories.json`: routine maintenance and storm advisories.
-- `rfi_reports.json`: reports with uncertain locations and 10–30-minute delays.
-  Some interference events have no report; reports can be false alarms. An
-  uncertainty ellipse and a nearby timestamp are corroboration, not proof.
+| Cause             | Test                                                                                                          | Action                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `MULTIPATH`       | A short dip, or an episode of 3 minutes or less                                                               | `CONTINUE_FALSE_ALARM`            |
+| `EQUIPMENT_FAULT` | Signal down on this tractor while the worst other tractor dropped less than 2.5 dB, or a lost correction link | `SERVICE_MACHINE_OTHERS_CONTINUE` |
+| `SPACE_WEATHER`   | Signal down on the fleet too, with signal flicker (S4) at 0.3 or more                                         | `HALT_OR_DEGRADED_MODE`           |
+| `JAMMING`         | Signal down on the fleet too, with S4 under 0.3, or a step on the fleet                                       | `HALT_AND_REPORT`                 |
+| `SPOOFING`        | More than 0.50 m off the row with a healthy signal and the link up, or a drift                                | `HALT_CROSSCHECK_AND_REPORT`      |
 
-All data is synthetic and unclassified. No live accounts, external API credits,
-physical equipment, or RF transmission are required.
+If several tests pass, the first in this order wins: multipath, spoofing, space weather, jamming, equipment fault. If none pass, the pipeline warns and uses `EQUIPMENT_FAULT`. Two causes at the same time become separate detections, and each one names the other.
 
-## Classes and expected actions
+The space feeds (Kp, Dst, S4, interference reports, satellite advisories) never pick the cause. They only add signs for or against it. Confidence is `0.40 + 0.45 × (share of signs seen) + 0.10 × bonus signs − 0.15 × signs against`, kept between 0.40 and 0.95. The evidence gives one sentence per sign with its value and cutoff.
 
-| Class             | Expected action                   |
-| ----------------- | --------------------------------- |
-| `SPACE_WEATHER`   | `HALT_OR_DEGRADED_MODE`           |
-| `JAMMING`         | `HALT_AND_REPORT`                 |
-| `SPOOFING`        | `HALT_CROSSCHECK_AND_REPORT`      |
-| `EQUIPMENT_FAULT` | `SERVICE_MACHINE_OTHERS_CONTINUE` |
-| `MULTIPATH`       | `CONTINUE_FALSE_ALARM`            |
+## 5. How the Labeled Data Was Used
 
-Do not force one class per timestamp: a machine fault or interference can
-coincide with a regional storm. Use a separate detection for each distinct cause.
+The 12 labeled development episodes were the tuning set. Nothing was tuned on the evaluation day, and it was only run to check that the file is valid.
 
-## Deliverables and judging
+`straightrows/score.py` is a port of the official scorer: 25 × macro-F1 plus 15 × onset credit. On the development predictions it gives the same result as Bluestaq's `scoring/score_submission.py`. The learned cutoffs were set just above the calm development minutes. For example, 13 dB flags no calm minute and still finds every label. The unit tests use made-up cases, not the labels.
 
-Submit by **hour 24 (Saturday, November 14, 4:00 pm CT)**:
+## 6. Results
 
-1. `submission.json`, following the template and passing the validator.
-2. A repository link with source, pinned dependencies, exact reproduction
-   commands, approach, limitations, and additional data that would help.
-3. A five-minute working demo followed by three minutes of Q&A.
+**Development:** 40.0 / 40 (macro-F1 1.00, onset credit 1.00), and all 12 actions agree.
 
-No separate technical memo is required. You must understand and defend your
-solution, including code produced with AI assistance.
+| Label \ Call      | `SPACE_WEATHER` | `JAMMING` | `SPOOFING` | `EQUIPMENT_FAULT` | `MULTIPATH` | Missed |
+| ----------------- | --------------- | --------- | ---------- | ----------------- | ----------- | ------ |
+| `SPACE_WEATHER`   | 2               |           |            |                   |             |        |
+| `JAMMING`         |                 | 3         |            |                   |             |        |
+| `SPOOFING`        |                 |           | 3          |                   |             |        |
+| `EQUIPMENT_FAULT` |                 |           |            | 2                 |             |        |
+| `MULTIPATH`       |                 |           |            |                   | 2           |        |
 
-| Event criterion                        | Points |
-| -------------------------------------- | -----: |
-| Technical execution                    |     30 |
-| Mission relevance and decision quality |     25 |
-| Innovation and research depth          |     20 |
-| Assurance and rigor                    |     15 |
-| Demo and communication                 |     10 |
+Every label is found with the right cause, and no false alarm is scored. Ten calls start on the labeled minute, and TRN-06 and TRN-08 start 1 minute late. The run also reports 913 short multipath dips that match no label. They cost nothing, since the scorer does not count multipath reports of 3 minutes or less. One candidate (T1 at 2026-05-05 02:00) passed no test, and it joined the real fault TRN-10. A perfect score shows the rules fit these 12 episodes. It does not show how they do on new data.
 
-The automated diagnostic is supporting evidence for judges, not an extra
-40-point event component. Its matching thresholds, onset credit, false-positive
-rules, and recurrent-multipath exemption are published on page 4 of the PDF.
-Ties use mission relevance and decision quality, then technical execution.
+**Evaluation:** `submission.json` has 447 detections. That is 7 episodes and 440 short multipath reports.
 
-## Submitting by the deadline
+| Start to end (UTC) | Tractors   | Cause             | Confidence |
+| ------------------ | ---------- | ----------------- | ---------- |
+| 01:00 to 02:00     | T1         | `EQUIPMENT_FAULT` | 0.85       |
+| 02:12 to 02:55     | T1, T2, T3 | `JAMMING`         | 0.95       |
+| 13:00 to 16:00     | T1, T2, T3 | `SPACE_WEATHER`   | 0.84       |
+| 16:30 to 17:12     | T1         | `SPOOFING`        | 0.85       |
+| 18:30 to 19:00     | T1, T2, T3 | `JAMMING`         | 0.85       |
+| 19:48 to 20:30     | T2         | `EQUIPMENT_FAULT` | 0.85       |
+| 21:49 to 22:24     | T3         | `SPOOFING`        | 0.85       |
 
-**Deadline: Saturday, November 14, 2026, 4:00 pm Central Time.** Pull requests
-opened or changed after the deadline are not accepted.
+Two candidates on T2 (19:48 and 20:11) passed no test and fell back to `EQUIPMENT_FAULT`. They were not looked at further, so the evaluation day stays untuned.
 
-1. Build in your own GitHub repository and keep it private until you submit.
-2. Before the deadline, make your repository public.
-3. Fork [Bluestaq/ndsu-hackathon-submissions](https://github.com/Bluestaq/ndsu-hackathon-submissions) and add exactly one file:
-   `submissions/<your-github-username>/submission.json`.
-4. Open a pull request. Its opening time is your submission time. A check
-   validates the file's format only; it never runs your code.
+## 7. Failure Modes
 
-Full step-by-step instructions, the agenda and results are at
-<https://bluestaq.github.io/ndsu-hackathon-submissions/>.
+- **Short dips:** every one is reported as multipath.
+  - The evaluation day has 440, mostly at row ends with all three tractors dipping together. The shortest dip is 7 seconds, which is the shortest that stays under the validator's 500-detection limit.
+  - Without per-satellite data, row-end shading cannot be told apart from true multipath.
+- **Wrong cause:** cases the rules would call wrong.
+  - Jamming on one tractor reads as `EQUIPMENT_FAULT`. A base-station outage reads as three equipment faults.
+  - A signal fault on one tractor during a storm reads as `SPACE_WEATHER`.
+  - The fleet is only two other tractors. So one of them having its own problem can make a fault look regional.
+- **Limits:** what the rules and data cannot show.
+  - Not every combination of two or three causes has been tested, since the labels show only a few.
+  - The rules fit the development data, and real data is messier.
+  - The confidence weights are a judgment call, since the scorer does not use confidence.
+  - It runs on recorded data after the fact. A real scenario would need it to run in real time.
 
-Registered participants receive the confirmed date, room, and kickoff time from
-**universityprograms@bluestaq.com**. One winner receives **both a paid summer internship at Bluestaq headquarters
-in Colorado Springs and a full one-year scholarship that pays tuition**. The internship is subject
-to standard internship eligibility and hiring requirements.
+## 8. Data That Would Help
+
+- **AGC level and noise floor:** these jump under jamming, so they would catch jamming on one tractor.
+- **Per-satellite signal strength with satellite IDs:** this would tell shading from multipath and match satellite advisories.
+- **More labeled episodes:** especially single-tractor jamming, faults during storms, and base-station outages.
+- **Base-station logs, wheel odometry or an IMU, and a field map:** these would check the link, the position, and known reflectors.
+
+## 9. External Services and AI Use
+
+The pipeline makes no network calls and uses no AI at runtime. So it runs offline once the data is downloaded. The validator `submission/validate_submission.py` is the official starter's. The demo page only requests Google Fonts, and it falls back to system fonts. AI coding assistants (Claude Code) were used while building, writing tests, and reviewing. Every rule and cutoff was chosen and reviewed by me.

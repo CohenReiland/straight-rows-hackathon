@@ -126,8 +126,8 @@ MAX_GAP_MIN = 3
 DIP_DROP_DB = 5.0
 # Seconds around each second used for that normal (its median). fixed
 DIP_NORMAL_WINDOW_S = 120
-# Shortest dip reported as multipath, to stay under 500 detections. fixed
-MIN_DIP_S = 10
+# Shortest dip reported as multipath. fixed
+MIN_DIP_S = 7
 # Minutes in each block when looking for a smooth drift off the line. fixed
 DRIFT_BLOCK_MIN = 3
 # A block drifts if its median cross-track error reaches this. fixed
