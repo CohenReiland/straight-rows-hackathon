@@ -83,3 +83,12 @@ ONSET_FULL_MIN = 5
 ONSET_ZERO_MIN = 60
 # Multipath reports this many minutes or shorter are not false alarms. fixed
 MULTIPATH_EXEMPT_MIN = 3
+
+# Causes and the action for each, in the guide's order. fixed (guide, matches labels)
+ACTIONS = {
+    "SPACE_WEATHER": "HALT_OR_DEGRADED_MODE",
+    "JAMMING": "HALT_AND_REPORT",
+    "SPOOFING": "HALT_CROSSCHECK_AND_REPORT",
+    "EQUIPMENT_FAULT": "SERVICE_MACHINE_OTHERS_CONTINUE",
+    "MULTIPATH": "CONTINUE_FALSE_ALARM",
+}

@@ -9,6 +9,9 @@ import pandas as pd
 
 from . import config
 
+# The five causes, in the guide's order
+CAUSES = list(config.ACTIONS)
+
 
 # Read detections or labels from a file.
 def read_items(path: Path, key: str) -> list[dict]:
@@ -169,3 +172,87 @@ def is_exempt(detection: dict, labels: list[dict]) -> bool:
             return False
 
     return True
+
+
+# Grade the detections and return the score and its details.
+def score(detections: list[dict], labels: list[dict]) -> dict:
+    # Sort the detections so ties always break the same way
+    detections = sorted(
+        detections,
+        key=lambda d: (d["start"], d["end"], d["class"], tuple(sorted(d["tractors"]))),
+    )
+
+    # Pair up detections and labels
+    matches = match(detections, labels)
+    label_for = {d_index: l_index for l_index, d_index in matches.items()}
+
+    # Start every cause at zero
+    counts = {cause: {"hits": 0, "false": 0, "missed": 0} for cause in CAUSES}
+
+    # Start the label results
+    outcomes = []
+    total_onset = 0.0
+    actions_agreed = 0
+
+    # Check each label
+    for l_index, label in enumerate(labels):
+        # Get its detection, if it has one
+        detection = detections[matches[l_index]] if l_index in matches else None
+
+        if detection is not None and detection["class"] == label["class"]:
+            # Right cause is a hit and earns onset credit
+            counts[label["class"]]["hits"] += 1
+            credit = onset_credit(detection, label)
+            total_onset += credit
+            outcomes.append((label, detection, credit))
+
+            # Count it if the action matches the label's
+            if detection.get("action") == label.get("recommended_action"):
+                actions_agreed += 1
+        else:
+            # Anything else is a miss
+            counts[label["class"]]["missed"] += 1
+            outcomes.append((label, detection, 0.0))
+
+    # Check each detection
+    false_alarms = []
+    for d_index, detection in enumerate(detections):
+        # Skip hits
+        is_hit = (
+            d_index in label_for
+            and labels[label_for[d_index]]["class"] == detection["class"]
+        )
+        if is_hit:
+            continue
+
+        # Skip exempt reports
+        if d_index not in label_for and is_exempt(detection, labels):
+            continue
+
+        # Everything else is a false alarm
+        counts[detection["class"]]["false"] += 1
+        false_alarms.append(detection)
+
+    # Work out F1 for each cause
+    for cause in CAUSES:
+        hits = counts[cause]["hits"]
+        false = counts[cause]["false"]
+        missed = counts[cause]["missed"]
+        counts[cause]["f1"] = 2 * hits / (2 * hits + false + missed) if hits else 0.0
+
+    # Average the five F1 scores
+    macro_f1 = sum(counts[cause]["f1"] for cause in CAUSES) / len(CAUSES)
+
+    # Average the onset credit
+    mean_onset = total_onset / len(labels) if labels else 0.0
+
+    # Return the final score and details
+    return {
+        "total": 25 * macro_f1 + 15 * mean_onset,
+        "macro_f1": macro_f1,
+        "mean_onset": mean_onset,
+        "counts": counts,
+        "outcomes": outcomes,
+        "false_alarms": false_alarms,
+        "actions_agreed": actions_agreed,
+    }
