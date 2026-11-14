@@ -162,6 +162,21 @@ ONE_TRACTOR_CAUSES = ["EQUIPMENT_FAULT", "MULTIPATH"]
 # Evidence and confidence settings
 # Satellite count is normal if it fell at most this many below usual. fixed
 SATS_NORMAL_DROP = 2
+# Storm feeds count from this many hours before a detection starts. fixed
+STORM_LEAD_IN_H = 3
+# Storm level (Kp) at or above this is a storm. fixed (standard storm level)
+STORM_KP = 5
+# Magnetic field drop (Dst) at or below this is a storm, in nT. fixed (standard)
+STORM_FIELD_DROP_NT = -50
+# Signal flicker (S4) at or above this is strong. fixed (standard level)
+STRONG_FLICKER_S4 = 0.5
+# A space weather advisory counts for this many hours after it is issued. fixed
+ADVISORY_LEAD_IN_H = 48
+# Interference reports arrive late: count them up to this long after the start
+REPORT_MAX_DELAY_MIN = 60
+# ...and this far outside the report's area, in km. fixed (judgment)
+REPORT_EXTRA_KM = 5
+EARTH_RADIUS_KM = 6371.0
 # Confidence starts at the floor and reaches the signs cap when every sign is
 # seen. Only bonus signs take it up to the cap. fixed (judgment)
 CONFIDENCE_FLOOR = 0.40

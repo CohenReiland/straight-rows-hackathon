@@ -1,6 +1,8 @@
 # Stage 7 helper: check the signs for a detection's cause, score the confidence,
 # and write evidence in clean sentences that read on their own.
 
+import math
+
 import pandas as pd
 
 from . import config
@@ -52,6 +54,152 @@ def spoofing_signs(rows: pd.DataFrame) -> list[dict]:
             sats_drop <= config.SATS_NORMAL_DROP,
             "satellite count stayed normal",
             "none lost" if sats_drop <= 0 else f"at most {sats_drop:.0f} below usual",
+        ),
+    ]
+
+
+# Distance between two points on the ground, in km.
+def distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    # Turn the differences into radians
+    lat_change = math.radians(lat2 - lat1)
+    lon_change = math.radians(lon2 - lon1)
+
+    # Haversine formula
+    a = (
+        math.sin(lat_change / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(lon_change / 2) ** 2
+    )
+    return 2 * config.EARTH_RADIUS_KM * math.asin(math.sqrt(a))
+
+
+# Readings of a storm feed from a few hours before the start to the end.
+def storm_readings(
+    feed: pd.DataFrame, column: str, start: pd.Timestamp, end: pd.Timestamp
+) -> pd.Series:
+    lead_in = pd.Timedelta(hours=config.STORM_LEAD_IN_H)
+    nearby = feed[(feed["ts"] >= start - lead_in) & (feed["ts"] < end)]
+    return nearby[column]
+
+
+# Space weather advisories issued in the hours before the start.
+def storm_advisories(advisories: pd.DataFrame, start: pd.Timestamp) -> pd.DataFrame:
+    lead_in = pd.Timedelta(hours=config.ADVISORY_LEAD_IN_H)
+    recent = (advisories["issued"] >= start - lead_in) & (advisories["issued"] <= start)
+    return advisories[recent & (advisories["type"] == "SPACE_WEATHER")]
+
+
+# Interference reports that arrived soon after the start, close enough to the tractors.
+def nearby_reports(
+    reports: pd.DataFrame, start: pd.Timestamp, lat: float, lon: float
+) -> list[dict]:
+    # Reports come in late, so look a while after the start
+    latest = start + pd.Timedelta(minutes=config.REPORT_MAX_DELAY_MIN)
+
+    # Keep reports in time whose area reaches the tractors
+    found = []
+    for report in reports.to_dict("records"):
+        if not start <= report["received"] <= latest:
+            continue
+        away_km = distance_km(lat, lon, report["lat"], report["lon"])
+        if away_km <= report["area_long_km"] + config.REPORT_EXTRA_KM:
+            found.append({**report, "away_km": away_km})
+
+    return found
+
+
+# Describe the interference reports in plain words.
+def describe_reports(found: list[dict], start: pd.Timestamp) -> str:
+    # Say none came
+    if not found:
+        return f"none within {config.REPORT_MAX_DELAY_MIN} min of the start"
+
+    # List each report with its delay, distance, and confidence
+    parts = []
+    for report in found:
+        delay_min = (report["received"] - start).total_seconds() / 60
+        parts.append(
+            f"{report['report_id']} arrived {delay_min:.0f} min after the start, "
+            f"{report['away_km']:.1f} km away, its own confidence "
+            f"{report['confidence']}"
+        )
+    return "; ".join(parts)
+
+
+# Signs for space weather: strong flicker on several tractors during a storm.
+def space_weather_signs(rows: pd.DataFrame, feeds: dict) -> list[dict]:
+    # Times, tractors, and place of the detection
+    start = rows["start"].min()
+    end = rows["end"].max()
+    tractors = sorted(rows["tractor"].unique())
+
+    # Storm feed readings around the detection
+    flicker = rows["signal_flicker_s4_max"].max()
+    storm_kp = storm_readings(feeds["storm_kp"], "storm_kp", start, end).max()
+    field_drop = storm_readings(
+        feeds["storm_field_drop"], "storm_field_drop_nt", start, end
+    ).min()
+    advisories = storm_advisories(feeds["advisories"], start)
+    reports = nearby_reports(
+        feeds["interference_reports"], start, rows["lat"].mean(), rows["lon"].mean()
+    )
+
+    # Name the advisories, if any
+    if advisories.empty:
+        advisory_text = f"none in the {config.ADVISORY_LEAD_IN_H} h before the start"
+    else:
+        advisory_text = ", ".join(
+            f"{a['advisory_id']} issued {a['issued']:%m-%d %H:%M} UTC"
+            for a in advisories.to_dict("records")
+        )
+
+    return [
+        sign(
+            "for",
+            flicker >= config.HIGH_FLICKER_S4,
+            "satellite signals flickering, a sign of a space storm",
+            f"highest signal flicker (S4) {flicker:.2f} near the start, "
+            f"storm level is {config.HIGH_FLICKER_S4} or more",
+        ),
+        sign(
+            "for",
+            len(tractors) >= 2,
+            "several tractors hit at once",
+            ", ".join(tractors),
+        ),
+        sign(
+            "for",
+            storm_kp >= config.STORM_KP,
+            "storm level high",
+            f"highest storm level (Kp) {storm_kp:.1f} from "
+            f"{config.STORM_LEAD_IN_H} h before the start, a storm is "
+            f"{config.STORM_KP} or more",
+        ),
+        sign(
+            "for",
+            field_drop <= config.STORM_FIELD_DROP_NT,
+            "Earth's magnetic field dropped",
+            f"lowest magnetic field drop (Dst) {field_drop:.0f} nT, a storm is "
+            f"{config.STORM_FIELD_DROP_NT} nT or lower",
+        ),
+        sign(
+            "bonus",
+            flicker >= config.STRONG_FLICKER_S4,
+            "strong flicker",
+            f"{flicker:.2f}, strong is {config.STRONG_FLICKER_S4} or more",
+        ),
+        sign(
+            "bonus",
+            not advisories.empty,
+            "space weather advisory issued before the start",
+            advisory_text,
+        ),
+        sign(
+            "against",
+            reports,
+            "interference report nearby, which points to jamming instead",
+            describe_reports(reports, start),
         ),
     ]
 
