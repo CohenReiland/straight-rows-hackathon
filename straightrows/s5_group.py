@@ -25,3 +25,14 @@ def overlap_numbers(starts: list[pd.Timestamp], ends: list[pd.Timestamp]) -> lis
         numbers.append(number)
 
     return numbers
+
+
+# Give each candidate an event number.
+def group_events(candidates: pd.DataFrame) -> pd.DataFrame:
+    # Sort by start time
+    candidates = candidates.sort_values("start").reset_index(drop=True)
+
+    # Overlapping candidates are one event
+    candidates["event"] = overlap_numbers(candidates["start"], candidates["end"])
+
+    return candidates
