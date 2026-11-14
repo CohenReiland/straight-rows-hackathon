@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Straight Rows</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="plotly.min.js"></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <nav class="sidebar">
+      <div class="brand">Straight Rows</div>
+      <ol>
+        <li><a href="#problem">The problem</a></li>
+        <li><a href="#data">The data</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#dev">Dev check</a></li>
+        <li><a href="#eval">Eval results</a></li>
+        <li><a href="#deep">Deep dive</a></li>
+        <li><a href="#limits">Limits</a></li>
+      </ol>
+      <button id="reload" type="button">Reload</button>
+      <div id="status" class="status">Loading…</div>
+    </nav>
+
+    <main>
+      <section id="problem">
+        <h1>Is it the Sun, an adversary, or my own hardware?</h1>
+        <p class="placeholder">Coming next: the 5 causes and the action for each.</p>
+      </section>
+
+      <section id="data">
+        <h2>2 · The data at a glance</h2>
+        <p>
+          72 hours of telemetry, one point per tractor per minute, with the space feeds below.
+          Colored bands are the training labels. Gray is parked time. Drag to zoom: the dev chart
+          follows. Double-click to zoom back out.
+        </p>
+        <div class="legend" id="data-legend"></div>
+        <div id="data-chart" class="chart tall"></div>
+      </section>
+
+      <section id="how">
+        <h2>3 · How it works</h2>
+        <p class="placeholder">Coming next: the 8 stages and the learned thresholds.</p>
+      </section>
+
+      <section id="dev">
+        <h2>4 · Dev check: the labels vs. my detections</h2>
+        <p>
+          For each tractor, the training labels are on top, my detections are underneath, and the
+          short multipath reports (not scored) get their own thin lane. Hatched means a false alarm
+          or a miss.
+        </p>
+        <div class="legend" id="dev-legend"></div>
+        <div id="dev-chart" class="chart"></div>
+        <div class="score-row">
+          <div id="scorecard"></div>
+          <aside class="callout">
+            <strong>Did it overfit?</strong> The cutoffs are set from each tractor's own normal,
+            not hardcoded per episode, and the eval window was never used for tuning. A perfect
+            dev score is still a warning: see the limits section.
+          </aside>
+        </div>
+        <h3>Each label</h3>
+        <div id="label-table"></div>
+        <h3>Confusion table</h3>
+        <div id="confusion"></div>
+      </section>
+
+      <section id="eval">
+        <h2>5 · Eval results</h2>
+        <p class="placeholder">Coming next: my eval detections, each with an action and confidence.</p>
+      </section>
+
+      <section id="deep">
+        <h2>6 · Deep dive</h2>
+        <p class="placeholder">
+          Coming next: one clear episode and one ambiguous one, zoomed to per-second data, with
+          their evidence and why each got its confidence.
+        </p>
+      </section>
+
+      <section id="limits">
+        <h2>7 · Limits and next data</h2>
+        <p class="placeholder">Coming next: known failure modes and the data that would help most.</p>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,325 @@
+/* Big type and high contrast: this goes on a projector of unknown size. */
+
+:root {
+  --ink: #111827;
+  --muted: #4b5563;
+  --line: #d1d5db;
+  --paper: #ffffff;
+  --panel: #f3f4f6;
+  --accent: #1d4ed8;
+  --nav-width: 230px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 20px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+/* Left-side navigation that stays put */
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--nav-width);
+  padding: 24px 18px;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.sidebar ol {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.sidebar li {
+  margin: 6px 0;
+}
+
+.sidebar a {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+#reload {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 14px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+#reload:hover {
+  background: var(--accent);
+  color: var(--paper);
+}
+
+.status {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+main {
+  margin-left: var(--nav-width);
+  padding: 0 40px 120px;
+  max-width: 1700px;
+}
+
+section {
+  padding-top: 40px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 32px;
+  scroll-margin-top: 0;
+}
+
+h1 {
+  font-size: 44px;
+  margin: 24px 0 12px;
+}
+
+h2 {
+  font-size: 34px;
+  margin: 0 0 8px;
+}
+
+h3 {
+  font-size: 24px;
+  margin: 28px 0 8px;
+}
+
+.lead {
+  font-size: 24px;
+  max-width: 1000px;
+}
+
+.placeholder {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.big-list li {
+  margin: 10px 0;
+  max-width: 1100px;
+}
+
+/* Cause cards in section 1 */
+.cause-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.cause-card {
+  border-left: 10px solid;
+  background: var(--panel);
+  padding: 14px 16px;
+  border-radius: 6px;
+}
+
+.cause-card .name {
+  font-weight: 700;
+}
+
+.cause-card .action {
+  font-family: Consolas, monospace;
+  font-size: 16px;
+  color: var(--muted);
+}
+
+/* Charts */
+.chart {
+  width: 100%;
+  min-height: 200px;
+}
+
+.chart.tall {
+  min-height: 1000px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 17px;
+  margin: 8px 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* Section 3 stages */
+.stages {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.group {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.group h4 {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.stage {
+  font-family: Consolas, monospace;
+  font-size: 17px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin: 6px 0;
+}
+
+.stage span {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--muted);
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+th {
+  background: var(--panel);
+}
+
+td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag {
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 4px;
+}
+
+.tag.hit {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.tag.missed,
+.tag.wrong_cause,
+.tag.false_alarm {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.tag.exempt {
+  background: var(--panel);
+  color: var(--muted);
+}
+
+/* Section 4 score row */
+.score-row {
+  display: grid;
+  grid-template-columns: auto minmax(260px, 420px);
+  gap: 24px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.big-numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  margin: 8px 0 12px;
+}
+
+.big-numbers div {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+.big-numbers strong {
+  display: block;
+  white-space: nowrap;
+  font-size: 36px;
+  color: var(--ink);
+}
+
+.callout {
+  background: #eff6ff;
+  border-left: 6px solid var(--accent);
+  padding: 14px 16px;
+  border-radius: 6px;
+}
+
+/* Section 5 evidence */
+details {
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+
+summary {
+  cursor: pointer;
+}
+
+details ul {
+  font-size: 17px;
+  color: var(--muted);
+}
+
+.mono {
+  font-family: Consolas, monospace;
+  font-size: 17px;
+}
+
+.error {
+  color: #991b1b;
+  font-weight: 600;
+}
