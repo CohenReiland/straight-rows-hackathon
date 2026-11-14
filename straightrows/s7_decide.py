@@ -83,7 +83,6 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
         tractors = sorted(same_cause["tractor"].unique())
 
         # Check the signs and write the evidence
-        # TODO step 8: add add_overlap_notes, to name the overlapping detections
         lines, score = evidence.explain(cause, same_cause, tested, feeds)
 
         detections.append(
@@ -98,7 +97,38 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
             }
         )
 
+    # Point each detection at the others that overlap it
+    add_overlap_notes(detections)
+
     # Sort by start time, then cause
     detections.sort(key=lambda detection: (detection["start"], detection["class"]))
 
     return detections
+
+
+# Add a line naming each other detection that overlaps in time and shares a
+# tractor. Multipath is left out both ways, since its dips are many and short.
+def add_overlap_notes(detections: list[dict]) -> None:
+    main = [d for d in detections if d["class"] != "MULTIPATH"]
+    for detection in main:
+        for other in main:
+            # Skip itself, and detections at other times or on other tractors
+            if other is detection:
+                continue
+            if other["start"] >= detection["end"] or other["end"] <= detection["start"]:
+                continue
+            if not set(other["tractors"]) & set(detection["tractors"]):
+                continue
+
+            # Name the other cause
+            start = other["start"][:16].replace("T", " ")
+            end = other["end"][11:16]
+            note = (
+                f"Overlaps {other['class']} on {', '.join(other['tractors'])} "
+                f"({start} to {end} UTC), reported as its own detection"
+            )
+
+            # Say it may explain the signs not seen, if there are any
+            if any(line.startswith("Not seen") for line in detection["evidence"]):
+                note += "; it may explain the signs not seen above"
+            detection["evidence"].append(note + ".")
