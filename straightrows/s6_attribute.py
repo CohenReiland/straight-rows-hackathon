@@ -101,3 +101,26 @@ def passing_causes(numbers: dict, kind: str) -> list[str]:
 
     # Keep the causes that passed
     return [cause for cause, passed in cause_tests.items() if passed]
+
+
+# Measure and test every candidate.
+def test_candidates(
+    candidates: pd.DataFrame,
+    minutes: pd.DataFrame,
+    telemetry: pd.DataFrame,
+    space_feeds: dict,
+) -> pd.DataFrame:
+    # Check each candidate
+    tested = []
+    for candidate in candidates.to_dict("records"):
+        # Get its numbers
+        numbers = measure(
+            candidate, minutes, telemetry, space_feeds["signal_flicker_s4"]
+        )
+
+        # Save its numbers and passing causes
+        passed = passing_causes(numbers, candidate["kind"])
+        tested.append({**candidate, **numbers, "passed": passed})
+
+    # Make the table
+    return pd.DataFrame(tested)
