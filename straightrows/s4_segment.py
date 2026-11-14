@@ -28,3 +28,8 @@ def is_signal_weak(minutes: pd.DataFrame) -> pd.Series:
         (minutes["signal_mean_drop_db"] >= config.WEAK_MEAN_DROP_DB)
         | has_bad_fix(minutes)
     )
+
+
+# True for working minutes with the base station link lost.
+def is_link_bad(minutes: pd.DataFrame) -> pd.Series:
+    return minutes["working"] & minutes["base_link_lost"]
