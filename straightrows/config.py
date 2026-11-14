@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 TELEMETRY = DATA / "farm" / "tractor_telemetry.csv.gz"
 SPACE_FEEDS = DATA / "sda"
+LABELS = DATA / "labels" / "train_episodes.json"
 
 # Rows the telemetry has
 EXPECTED_ROWS = 777_600

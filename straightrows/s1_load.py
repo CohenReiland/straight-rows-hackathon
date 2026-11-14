@@ -71,3 +71,15 @@ def load_feed(feed: str) -> pd.DataFrame:
 # Read each space feed into its own table, keyed by our feed name.
 def load_space_feeds() -> dict[str, pd.DataFrame]:
     return {feed: load_feed(feed) for feed in config.SPACE_FEED_FILES}
+
+
+# Read the labeled dev episodes, one row per episode.
+def load_labels() -> pd.DataFrame:
+    content = json.loads(config.LABELS.read_text(encoding="utf8"))
+    labels = pd.DataFrame(content["episodes"])
+
+    # Parse the times as UTC
+    for column in ["start", "end"]:
+        labels[column] = pd.to_datetime(labels[column], utc=True, format="ISO8601")
+
+    return labels.sort_values("start").reset_index(drop=True)
