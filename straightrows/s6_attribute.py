@@ -40,6 +40,9 @@ def measure(
     # Return the worst value of each signal
     return {
         "duration_min": (candidate["end"] - candidate["start"]).total_seconds() / 60,
+        "collapse_s": collapse_seconds(
+            second_drops(candidate, episode_minutes, telemetry)
+        ),
         "signal_weakest_min_db": episode_minutes["signal_weakest_db"].min(),
         "signal_mean_drop_max_db": episode_minutes["signal_mean_drop_db"].max(),
         "signal_weakest_drop_median_db": episode_minutes[
@@ -79,3 +82,25 @@ def second_drops(
     # Smooth out the noise (counts rows, so it relies on one row per second)
     smooth = drops.rolling(config.COLLAPSE_SMOOTH_S, center=True, min_periods=1)
     return smooth.median().tolist()
+
+
+
+# Seconds the drop took to rise from 20% to 80% of its worst.
+# None if it never really dropped.
+def collapse_seconds(drops: list[float]) -> int | None:
+    # Skip episodes without a real drop
+    worst = max(drops, default=0)
+    if not worst >= config.MIN_COLLAPSE_DROP_DB:
+        return None
+
+    # Find the first second past each share of the worst drop
+    rise_start = rise_end = None
+    for second, drop in enumerate(drops):
+        if rise_start is None and drop >= config.COLLAPSE_FROM_SHARE * worst:
+            rise_start = second
+        if drop >= config.COLLAPSE_TO_SHARE * worst:
+            rise_end = second
+            break
+
+    # Seconds between the two
+    return rise_end - rise_start
