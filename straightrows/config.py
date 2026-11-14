@@ -154,7 +154,36 @@ SHORT_EPISODE_MIN = 3
 HEALTHY_MAX_DROP_DB = 3.0
 # The fleet is fine if the other tractors dropped less than this. learned
 FLEET_OK_DROP_DB = 2.5
-# Signal flicker (S4) at or above this means a storm. fixed 
+# Signal flicker (S4) at or above this means a storm. fixed
 HIGH_FLICKER_S4 = 0.3
 # Causes that stay on one tractor and never join across tractors. fixed (guide)
 ONE_TRACTOR_CAUSES = ["EQUIPMENT_FAULT", "MULTIPATH"]
+
+# Evidence and confidence settings
+# Satellite count is normal if it fell at most this many below usual. fixed
+SATS_NORMAL_DROP = 2
+# Storm feeds count from this many hours before a detection starts. fixed
+STORM_LEAD_IN_H = 3
+# Storm level (Kp) at or above this is a storm. fixed (standard storm level)
+STORM_KP = 5
+# Magnetic field drop (Dst) at or below this is a storm, in nT. fixed (standard)
+STORM_FIELD_DROP_NT = -50
+# Signal flicker (S4) at or above this is strong. fixed (standard level)
+STRONG_FLICKER_S4 = 0.5
+# A space weather advisory counts for this many hours after it is issued. fixed
+ADVISORY_LEAD_IN_H = 48
+# Interference reports arrive late: count them up to this long after the start
+REPORT_MAX_DELAY_MIN = 60
+# This far outside the report's area, in km. fixed (judgment)
+REPORT_EXTRA_KM = 5
+EARTH_RADIUS_KM = 6371.0
+# Multipath dips this close together count as the same spot, in m. fixed
+SAME_SPOT_M = 100
+# Confidence starts at the floor and reaches the signs cap when every sign is
+# seen. Only bonus signs take it up to the cap. fixed (judgment)
+CONFIDENCE_FLOOR = 0.40
+CONFIDENCE_SIGNS_CAP = 0.85
+CONFIDENCE_CAP = 0.95
+# Added for each bonus sign seen, taken off for each sign against. fixed
+CONFIDENCE_BONUS = 0.10
+CONFIDENCE_PENALTY = 0.15
