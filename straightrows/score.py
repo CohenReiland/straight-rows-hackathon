@@ -128,3 +128,19 @@ def match(detections: list[dict], labels: list[dict]) -> dict[int, int]:
     matches.update(best_pairs(detections, labels, left_d, left_l, False))
 
     return matches
+
+
+# Full credit within 5 min of the true start, down to 0 at 60 min.
+def onset_credit(detection: dict, label: dict) -> float:
+    # Minutes between the two starts (early and late count the same)
+    error_min = abs((detection["start"] - label["start"]).total_seconds()) / 60
+
+    # Close enough gets full credit
+    if error_min <= config.ONSET_FULL_MIN:
+        return 1.0
+
+    # Minutes where the credit shrinks
+    zero_range = config.ONSET_ZERO_MIN - config.ONSET_FULL_MIN
+
+    # Less credit the further off, never below 0
+    return max(0.0, (config.ONSET_ZERO_MIN - error_min) / zero_range)

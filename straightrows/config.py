@@ -77,3 +77,7 @@ WORKING_MINUTE_SHARE = 0.5
 # A detection matches a label only if both overlaps reach these. fixed
 MATCH_TIME_IOU = 0.30
 MATCH_TRACTOR_IOU = 0.50
+# Onset credit is full within this many minutes of the true start. fixed
+ONSET_FULL_MIN = 5
+# Onset credit falls to 0 at this many minutes off. fixed
+ONSET_ZERO_MIN = 60
