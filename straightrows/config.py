@@ -65,3 +65,9 @@ SPACE_FEED_FIELDS = {
 WORKING_SPEED_MPS = 0.5
 # A row counts as working if the tractor moved within this many seconds of it. fixed
 WORKING_LOOKAROUND_S = 30
+
+# Fix states, worst to best. fixed (README)
+FIX_RANK = {"NO_FIX": 0, "AUTONOMOUS": 1, "DGPS": 2, "RTK_FLOAT": 3, "RTK_FIXED": 4}
+
+# A minute is working if more 50% of its seconds are working. fixed
+WORKING_MINUTE_SHARE = 0.5
