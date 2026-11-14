@@ -40,9 +40,6 @@ def measure(
     # Return the worst value of each signal
     return {
         "duration_min": (candidate["end"] - candidate["start"]).total_seconds() / 60,
-        "collapse_s": collapse_seconds(
-            second_drops(candidate, episode_minutes, telemetry)
-        ),
         "signal_weakest_min_db": episode_minutes["signal_weakest_db"].min(),
         "signal_mean_drop_max_db": episode_minutes["signal_mean_drop_db"].max(),
         "signal_weakest_drop_median_db": episode_minutes[
@@ -61,46 +58,3 @@ def measure(
         ].mean(),
         "signal_flicker_s4_max": nearby_flicker["signal_flicker_s4"].max(),
     }
-
-
-# Get the average signal's drop below normal each second, from a bit before the episode.
-def second_drops(
-    candidate: dict, episode_minutes: pd.DataFrame, telemetry: pd.DataFrame
-) -> list[float]:
-    # Get the seconds, with a few minutes before the start
-    lead_in = pd.Timedelta(minutes=config.COLLAPSE_LEAD_IN_MIN)
-    seconds = telemetry[
-        (telemetry["tractor_id"] == candidate["tractor"])
-        & (telemetry["ts"] >= candidate["start"] - lead_in)
-        & (telemetry["ts"] < candidate["end"])
-    ]
-
-    # Drop below this tractor's normal
-    normal = episode_minutes["signal_mean_normal_db"].iloc[0]
-    drops = normal - seconds["signal_mean_db"]
-
-    # Smooth out the noise (counts rows, so it relies on one row per second)
-    smooth = drops.rolling(config.COLLAPSE_SMOOTH_S, center=True, min_periods=1)
-    return smooth.median().tolist()
-
-
-
-# Seconds the drop took to rise from 20% to 80% of its worst.
-# None if it never really dropped.
-def collapse_seconds(drops: list[float]) -> int | None:
-    # Skip episodes without a real drop
-    worst = max(drops, default=0)
-    if not worst >= config.MIN_COLLAPSE_DROP_DB:
-        return None
-
-    # Find the first second past each share of the worst drop
-    rise_start = rise_end = None
-    for second, drop in enumerate(drops):
-        if rise_start is None and drop >= config.COLLAPSE_FROM_SHARE * worst:
-            rise_start = second
-        if drop >= config.COLLAPSE_TO_SHARE * worst:
-            rise_end = second
-            break
-
-    # Seconds between the two
-    return rise_end - rise_start
