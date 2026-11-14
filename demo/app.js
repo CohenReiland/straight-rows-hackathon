@@ -23,7 +23,7 @@ const CAUSES = {
 const ORDER = Object.keys(CAUSES);
 
 // Tractor line colors in the deep dive
-const TRACTOR_COLORS = { T1: INK, T2: ACCENT, T3: QUIET };
+const TRACTOR_COLORS = { T1: INK, T2: ACCENT, T3: FAINT };
 
 // The 8 stages, grouped like run.py
 const STAGES = [
@@ -170,11 +170,12 @@ function yAxis(row, extra) {
   };
 }
 
-// A bold row title on the left edge
-function rowTitle(row, text) {
+// A bold row title on the left edge, with an optional small line under it
+function rowTitle(row, text, small) {
+  const under = small ? `<br><span style="font-size:11px;color:${MUTED}">${small}</span>` : "";
   return {
-    xref: "paper", yref: `${row.axis} domain`, x: -0.005, y: 0.5, xanchor: "right",
-    text: `<b>${text}</b>`, showarrow: false, font: { size: 15, color: INK },
+    xref: "paper", yref: `${row.axis} domain`, x: -0.005, y: 0.5, xanchor: "right", align: "right",
+    text: `<b>${text}</b>${under}`, showarrow: false, font: { size: 15, color: INK },
   };
 }
 
@@ -259,9 +260,9 @@ function drawDataChart() {
       ]
     : [];
   const feedRows = [
-    { id: "Kp", weight: 1.4, kind: "kp" },
-    { id: "Dst", weight: 1.4, kind: "dst" },
-    { id: "S4", weight: 1.4, kind: "s4" },
+    { id: "Kp", weight: 1.4, kind: "kp", small: "storm level" },
+    { id: "Dst", weight: 1.4, kind: "dst", small: "field drop" },
+    { id: "S4", weight: 1.4, kind: "s4", small: "flicker" },
     { id: "Reports", weight: 0.7, kind: "reports" },
   ];
   const rows = stackRows([...lanes, ...debug, ...feedRows], 0.018);
@@ -271,7 +272,7 @@ function drawDataChart() {
   const traces = [];
 
   for (const row of rows) {
-    layout.annotations.push(rowTitle(row, row.id));
+    layout.annotations.push(rowTitle(row, row.id, row.small));
 
     if (row.kind === "tractor") {
       // Weakest satellite signal, with link-lost and off-row ticks underneath
@@ -323,7 +324,7 @@ function drawDataChart() {
       traces.push({
         type: "bar", x: kp.ts.map(t), y: kp.storm_kp, yaxis: row.axis, width: 3 * 3600 * 1000 * 0.85, offset: 0,
         marker: { color: kp.storm_kp.map((v) => (v >= cutoffs.STORM_KP ? CAUSES.SPACE_WEATHER.color : QUIET)) },
-        hovertemplate: `storm strength (Kp) %{y}<br>%{x|%b %d %H:%M}<extra></extra>`,
+        hovertemplate: `storm level (Kp) %{y}<br>%{x|%b %d %H:%M}<extra></extra>`,
       });
       layout.shapes.push(cutoffLine(row, cutoffs.STORM_KP));
     } else if (row.kind === "dst") {
@@ -379,12 +380,14 @@ function drawDataChart() {
   Plotly.react("data-chart", traces, layout, PLOT_CONFIG);
 
   el("data-legend").innerHTML = [
-    ...ORDER.map((c) => `<span><span class="swatch" style="background:${CAUSES[c].color};opacity:0.5"></span>${CAUSES[c].label} label</span>`),
+    `<span class="legend-title">Training labels</span>`,
+    ...ORDER.map((c) => `<span><span class="swatch" style="background:${CAUSES[c].color};opacity:0.5"></span>${CAUSES[c].label}</span>`),
+    `<span class="legend-title">Marks</span>`,
     `<span><span class="swatch" style="height:5px;background:${INK}"></span>correction link lost</span>`,
     `<span><span class="swatch" style="height:5px;background:${CAUSES.SPOOFING.color}"></span>off the row (over ${data.meta.cutoffs.BAD_CROSS_TRACK_ERROR_M} m)</span>`,
     `<span><svg width="12" height="10" viewBox="0 0 12 10" aria-hidden="true"><path d="M0 10L6 0l6 10Z" fill="${CAUSES.JAMMING.color}"></path></svg>interference report</span>`,
-    `<span><span class="swatch" style="background:${QUIET}"></span>satellite advisory</span>`,
-    `<span><span style="width:18px;border-top:2px dashed ${FAINT}"></span>cutoff</span>`,
+    `<span><span class="swatch" style="background:${QUIET}"></span>space weather advisory</span>`,
+    `<span><span class="swatch cutoff"></span>cutoff</span>`,
   ].join("");
 }
 
@@ -469,9 +472,9 @@ function drawDevChart() {
   const labelInfo = Object.fromEntries(data.matches.labels.map((l) => [l.label_id, l]));
   const specs = tractors().flatMap((tractor) => [
     { id: tractor, tractor, weight: 2.4, kind: "signal" },
-    { id: "labels", tractor, weight: 0.55, kind: "labels" },
-    { id: "mine", tractor, weight: 0.55, kind: "mine" },
-    { id: "short", tractor, weight: 0.4, kind: "free" },
+    { id: "Labels", tractor, weight: 0.55, kind: "labels" },
+    { id: "My calls", tractor, weight: 0.55, kind: "mine" },
+    { id: "Short dips", tractor, weight: 0.4, kind: "free" },
   ]);
   const rows = stackRows(specs, 0.012);
   const [devStart, devEnd] = data.meta.windows.dev;
@@ -498,7 +501,7 @@ function drawDevChart() {
     layout[row.key] = yAxis(row, { range: [0, 1], showticklabels: false });
     layout.annotations.push({
       xref: "paper", yref: `${row.axis} domain`, x: -0.005, y: 0.5, xanchor: "right",
-      text: row.id, showarrow: false, font: { size: 11, color: MUTED },
+      text: row.id, showarrow: false, font: { size: 12, color: MUTED },
     });
     layout.shapes.push({
       type: "rect", xref: "paper", yref: `${row.axis} domain`, x0: 0, x1: 1, y0: 0.05, y1: 0.95,
@@ -534,7 +537,7 @@ function drawDevChart() {
 
   el("dev-legend").innerHTML = [
     ...ORDER.map((c) => `<span><span class="swatch" style="background:${CAUSES[c].color}"></span>${CAUSES[c].label}</span>`),
-    `<span>Hatched: miss or false alarm. Faded "short" lane: short multipath, not scored.</span>`,
+    `<span>Hatched: a miss or a false alarm. Short dips: short multipath, not scored.</span>`,
   ].join("");
 }
 
@@ -678,7 +681,7 @@ function drawField(episodes) {
         </svg>
       </div></div>`;
   });
-  rows.push(`<div class="hours"><span style="width:28px;flex:none"></span><div><span>00Z</span><span>06Z</span><span>12Z</span><span>18Z</span><span>24Z</span></div></div>`);
+  rows.push(`<div class="hours"><span style="width:28px;flex:none"></span><div><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00 UTC</span></div></div>`);
   el("field").innerHTML = rows.join("");
   el("field").querySelectorAll(".block").forEach((block) =>
     block.addEventListener("click", () => {
@@ -693,7 +696,7 @@ function drawEpisodeList(episodes) {
   el("ep-list").innerHTML = `<div class="count">${count}</div>` + episodes.map((e) => `
     <button type="button" data-index="${e.index}" aria-pressed="${e.index === view.picked}">
       <span class="dot" style="width:10px;height:10px;background:${CAUSES[e.class].color}"></span>
-      <span class="when">${hhmm(e.start)} to ${hhmm(e.end)}</span>
+      <span class="when">${hhmm(e.start)}–${hhmm(e.end)}</span>
       <span class="what">${CAUSES[e.class].label} <span>${e.tractors.join(" ")}</span></span>
       <span class="conf">${e.confidence.toFixed(2)}</span>
     </button>`).join("");
@@ -724,7 +727,7 @@ function drawDetail(e) {
   if (e.status === "hit") tag = `<span class="tag">Matches ${e.label_id}</span>`;
   else if (e.status === "exempt") tag = `<span class="tag grey">Short dip, not scored</span>`;
   else if (e.status === "false_alarm") tag = `<span class="tag bad">False alarm${e.label_id ? ` (${e.label_id})` : ""}</span>`;
-  else if (e.status === "eval") tag = `<span class="tag grey">Eval, no label</span>`;
+  else if (e.status === "eval") tag = `<span class="tag grey">Eval day, no label to check against</span>`;
 
   el("detail").innerHTML = `
     <div>
@@ -746,7 +749,18 @@ function drawDetail(e) {
       <ul class="signs">${e.signs.map((s) => `<li>${SIGN_ICONS[s.state]}<span><strong>${SIGN_WORDS[s.state]}: ${escapeHtml(s.label)}</strong> <span class="detail-text">(${escapeHtml(s.detail)})</span></span></li>`).join("")}</ul>
       ${e.notes.length ? `<ul class="notes">${e.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>` : ""}
     </div>
-    <div class="formula">confidence = ${e.formula}</div>`;
+    <div>
+      <div class="formula">confidence = ${e.formula}</div>
+      <p class="formula-key">${formulaKey()}</p>
+    </div>`;
+}
+
+// What each part of the confidence sum means, from the pipeline's own settings
+function formulaKey() {
+  const c = data.meta.confidence;
+  if (!c) return "";
+  return `Starts at ${c.start.toFixed(2)}, plus up to ${c.signs.toFixed(2)} for the share of signs seen, plus ${c.bonus.toFixed(2)} per bonus sign, ` +
+    `minus ${c.penalty.toFixed(2)} per sign against. It never goes above ${c.cap.toFixed(2)}.`;
 }
 
 // ---------- Section 6 ----------
@@ -772,7 +786,7 @@ function drawDeepDive(name) {
 
   for (const row of rows) {
     if (row.kind === "signal") {
-      layout[row.key] = yAxis(row, { range: [-6, 48], tickvals: [0, 20, 40] });
+      layout[row.key] = yAxis(row, { range: [-4, 48], tickvals: [0, 20, 40] });
       layout.annotations.push(rowTitle(row, "Signal"));
       for (const [tractor, values] of Object.entries(dive.tractors)) {
         traces.push({
@@ -782,7 +796,7 @@ function drawDeepDive(name) {
         });
         // Correction link lost, as ticks under the lines
         const lost = values.ts.filter((_, j) => values.base_link_lost[j]).map(t);
-        const lane = { T1: -1.5, T2: -3, T3: -4.5 }[tractor];
+        const lane = { T1: 3, T2: 1, T3: -1 }[tractor];
         traces.push({
           type: "scatter", mode: "markers", x: lost, y: lost.map(() => lane), yaxis: row.axis,
           marker: { symbol: "square", size: 3, color: TRACTOR_COLORS[tractor] },
@@ -814,17 +828,17 @@ function drawDeepDive(name) {
       layout.annotations.push({
         xref: "x", yref: row.axis, x: t(call.start > start ? call.start : start), y: 0.5, xanchor: "left",
         text: `<b>${CAUSES[call.class].label} on ${call.tractors.join(", ")}, ${call.confidence.toFixed(2)}</b>`,
-        showarrow: false, font: { size: 12, color: PAPER },
+        showarrow: false, font: { size: 12, color: PAPER }, bgcolor: color, borderpad: 2,
       });
     }
   }
   Plotly.react(`dive-${name}`, traces, layout, PLOT_CONFIG);
 
   el(`dive-${name}-calls`).innerHTML = calls.map((call) => `
-    <div style="border-top:2px solid ${CAUSES[call.class].color};padding-top:8px">
-      <strong style="color:${CAUSES[call.class].color}">${CAUSES[call.class].label} on ${call.tractors.join(", ")}</strong>
-      <span class="mono" style="font-size:13px;color:${MUTED}"> ${hhmm(call.start)} to ${hhmm(call.end)}</span>
-      <div class="formula">${call.formula}</div>
+    <div class="call-card" style="--cause:${CAUSES[call.class].color}">
+      <strong>${CAUSES[call.class].label} on ${call.tractors.join(", ")}</strong>
+      <span class="when"> ${hhmm(call.start)}–${hhmm(call.end)}</span>
+      <div class="formula">confidence = ${call.formula}</div>
       <ul class="notes">${call.signs.map((s) => `<li>${SIGN_WORDS[s.state]}: ${escapeHtml(s.label)}</li>`).join("")}${call.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
     </div>`).join("");
 }
@@ -886,6 +900,7 @@ function highlightNav() {
 async function drawAll() {
   const status = el("status");
   status.textContent = "Loading…";
+  el("load-error").hidden = true;
   try {
     await loadData();
     drawCauses();
@@ -901,6 +916,7 @@ async function drawAll() {
   } catch (error) {
     console.error(error);
     status.innerHTML = `<span class="error">Couldn't load</span>`;
+    el("load-error").hidden = false;
   }
 }
 

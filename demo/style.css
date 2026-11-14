@@ -65,6 +65,20 @@ body {
   background: #cfe0f5;
 }
 
+/* Scrolling boxes get a thin scrollbar in the page's own grays */
+.table-box,
+.field,
+.ep-list,
+.formula {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-strong) transparent;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
 a {
   color: var(--accent);
 }
@@ -89,10 +103,6 @@ h3 {
 p,
 li {
   text-wrap: pretty;
-}
-
-.disp {
-  font-family: var(--font-display);
 }
 
 .mono {
@@ -278,6 +288,22 @@ h3 {
   font-weight: 600;
 }
 
+/* Shown at the top of the page when the data files can't be read */
+.load-error {
+  margin: var(--space-xl) 0 0;
+  padding: var(--space-md);
+  border: 2px solid var(--jam);
+  color: var(--jam);
+  font-weight: 600;
+  max-width: 70ch;
+}
+
+.note {
+  margin: 0 0 var(--space-md);
+  color: var(--ink-2);
+  max-width: 70ch;
+}
+
 /* ---------- Section 1 ---------- */
 
 .cause-list {
@@ -358,6 +384,29 @@ h3 {
   width: 12px;
   height: 12px;
   flex: none;
+}
+
+/* Legend marks for a line, a row of ticks, and a dashed cutoff */
+.swatch.line {
+  width: 18px;
+  height: 3px;
+}
+
+.swatch.dashes {
+  width: 18px;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, var(--accent) 0 4px, transparent 4px 7px);
+}
+
+.swatch.cutoff {
+  width: 18px;
+  height: 0;
+  border-top: 2px dashed var(--faint);
+}
+
+.legend .legend-title {
+  font-weight: 600;
+  color: var(--muted);
 }
 
 /* A checkbox that looks like a pill button */
@@ -443,7 +492,13 @@ h3 {
   flex: 1 1 260px;
   display: flex;
   gap: var(--space-sm);
-  align-items: center;
+  align-items: flex-start;
+}
+
+/* The arrow sits level with the group heading */
+.stage-group > svg {
+  flex: none;
+  margin-top: 26px;
 }
 
 .stage-group > div {
@@ -535,12 +590,25 @@ h3 {
 
 /* ---------- Section 5 ---------- */
 
+/* A gray band from the rail to the right edge of the window */
 section#eval {
   background: var(--paper-2);
   margin: 0 calc(-1 * var(--space-2xl));
   padding-left: var(--space-2xl);
   padding-right: var(--space-2xl);
   border-top: 0;
+  box-shadow: 0 0 0 100vmax var(--paper-2);
+  clip-path: inset(0 -100vmax 0 0);
+}
+
+section#deep {
+  border-top: 0;
+}
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
 }
 
 .day-bar {
@@ -675,7 +743,7 @@ section#eval {
 }
 
 .ep-list {
-  flex: 1 1 300px;
+  flex: 1 1 400px;
   min-width: 0;
   max-height: 640px;
   overflow-y: auto;
@@ -720,14 +788,19 @@ section#eval {
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--ink-2);
-  width: 128px;
+  width: 96px;
   flex: none;
 }
 
 .ep-list .what {
   flex: 1;
+  min-width: 0;
   font-size: 15.5px;
   font-weight: 600;
+}
+
+.ep-list .what span {
+  white-space: nowrap;
 }
 
 .ep-list .what span {
@@ -742,7 +815,7 @@ section#eval {
 }
 
 .detail {
-  flex: 999 1 540px;
+  flex: 999 1 480px;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -870,6 +943,12 @@ section#eval {
   white-space: nowrap;
 }
 
+.formula-key {
+  margin: var(--space-2xs) 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
 /* ---------- Section 6 ---------- */
 
 .dive {
@@ -898,8 +977,21 @@ section#eval {
   margin-top: var(--space-md);
 }
 
-.dive-calls div {
+.call-card {
   flex: 1 1 320px;
+  min-width: 0;
+  border-top: 2px solid var(--cause);
+  padding-top: var(--space-xs);
+}
+
+.call-card strong {
+  color: var(--cause);
+}
+
+.call-card .when {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .dive-calls strong {

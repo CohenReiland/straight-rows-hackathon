@@ -287,8 +287,8 @@ def cause_tests() -> dict:
             f"or every tractor steps down at once during a storm."
         ),
         "SPOOFING": (
-            f"More than {config.BAD_CROSS_TRACK_ERROR_M} m off the line while the "
-            f"signal looks healthy and the base link is fine, or a slow drift."
+            f"More than {config.BAD_CROSS_TRACK_ERROR_M} m off the row while the "
+            f"signal looks healthy and the correction link is up, or a slow drift."
         ),
         "EQUIPMENT_FAULT": (
             f"One tractor drops while the others stay within "
@@ -315,6 +315,13 @@ def build_meta() -> dict:
             "HIGH_FLICKER_S4": config.HIGH_FLICKER_S4,
         },
         "tests": cause_tests(),
+        "confidence": {
+            "start": config.CONFIDENCE_FLOOR,
+            "signs": round(config.CONFIDENCE_SIGNS_CAP - config.CONFIDENCE_FLOOR, 2),
+            "bonus": config.CONFIDENCE_BONUS,
+            "penalty": config.CONFIDENCE_PENALTY,
+            "cap": config.CONFIDENCE_CAP,
+        },
         "built": format_time(pd.Timestamp.now(tz="UTC")),
     }
 
