@@ -10,7 +10,8 @@ def add_working(telemetry: pd.DataFrame) -> pd.DataFrame:
     # 1 if the tractor is moving, 0 if not
     is_moving = (telemetry["speed_mps"] > config.WORKING_SPEED_MPS).astype(int)
 
-    # Seconds to look at around each row
+    # Seconds to look at around each row. Counts rows, so it relies on one row per second
+    # with no gaps. The loader warns if rows are missing.
     window_size = 2 * config.WORKING_LOOKAROUND_S + 1
 
     # Start every row as parked
