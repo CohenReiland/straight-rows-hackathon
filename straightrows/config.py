@@ -14,7 +14,7 @@ VALIDATOR = ROOT / "submission" / "validate_submission.py"
 
 # Where run.py writes each window's detections
 OUTPUT = {"dev": ROOT / "dev_predictions.json", "eval": ROOT / "submission.json"}
-# Each tractor's normal and the cutoffs, rewritten every run (D18)
+# Each tractor's normal and the cutoffs, rewritten every run
 THRESHOLDS = ROOT / "thresholds.json"
 
 # Who is submitting: GitHub username only, never email or student ID. fixed

@@ -62,8 +62,22 @@ def test_fleet_leaves_out_self_and_parked():
         minute("T3", "12:00", signal_mean_drop_db=99.0, working=False),
     ]
     table = add_fleet_comparison(pd.DataFrame(rows)).set_index("tractor_id")
-    assert table.loc["T1", "fleet_signal_mean_drop_db"] == 4.0
-    assert table.loc["T2", "fleet_signal_mean_drop_db"] == 10.0
+    assert table.loc["T1", "fleet_worst_signal_mean_drop_db"] == 4.0
+    assert table.loc["T2", "fleet_worst_signal_mean_drop_db"] == 10.0
+
+
+# The fleet value is the worst other tractor, not the average: a jammer that misses
+# T3 still shows fully on T1 and T2.
+def test_fleet_uses_worst_other():
+    rows = [
+        minute("T1", "12:00", signal_mean_drop_db=10.0),
+        minute("T2", "12:00", signal_mean_drop_db=8.0),
+        minute("T3", "12:00", signal_mean_drop_db=0.0),
+    ]
+    table = add_fleet_comparison(pd.DataFrame(rows)).set_index("tractor_id")
+    assert table.loc["T1", "fleet_worst_signal_mean_drop_db"] == 8.0
+    assert table.loc["T2", "fleet_worst_signal_mean_drop_db"] == 10.0
+    assert table.loc["T3", "fleet_worst_signal_mean_drop_db"] == 10.0
 
 
 # With no other working tractor the fleet value is blank, not 0.
@@ -71,7 +85,7 @@ def test_fleet_blank_when_alone():
     rows = [minute("T1", "12:00", signal_mean_drop_db=10.0)]
     rows.append(minute("T2", "12:00", signal_mean_drop_db=0.0, working=False))
     table = add_fleet_comparison(pd.DataFrame(rows)).set_index("tractor_id")
-    assert pd.isna(table.loc["T1", "fleet_signal_mean_drop_db"])
+    assert pd.isna(table.loc["T1", "fleet_worst_signal_mean_drop_db"])
 
 
 # Another tractor losing its link shows up for the others, not for itself.

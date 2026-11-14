@@ -22,7 +22,7 @@ def is_signal_bad(minutes: pd.DataFrame) -> pd.Series:
 
 
 # True for working minutes that are still partially off the normal, used to stretch
-# episodes. Not called yet: stretching waits for step 7 (D56).
+# episodes. Not called yet: stretching waits for step 7.
 def is_signal_weak(minutes: pd.DataFrame) -> pd.Series:
     return minutes["working"] & (
         (minutes["signal_mean_drop_db"] >= config.WEAK_MEAN_DROP_DB)
