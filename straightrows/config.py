@@ -177,6 +177,8 @@ REPORT_MAX_DELAY_MIN = 60
 # This far outside the report's area, in km. fixed (judgment)
 REPORT_EXTRA_KM = 5
 EARTH_RADIUS_KM = 6371.0
+# Multipath dips this close together count as the same spot, in m. fixed
+SAME_SPOT_M = 100
 # Confidence starts at the floor and reaches the signs cap when every sign is
 # seen. Only bonus signs take it up to the cap. fixed (judgment)
 CONFIDENCE_FLOOR = 0.40

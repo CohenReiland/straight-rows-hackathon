@@ -1,8 +1,7 @@
 # Stage 7 helper: check the signs for a detection's cause, score the confidence,
 # and write evidence in clean sentences that read on their own.
 
-import math
-
+import numpy as np
 import pandas as pd
 
 from . import config
@@ -58,20 +57,21 @@ def spoofing_signs(rows: pd.DataFrame) -> list[dict]:
     ]
 
 
-# Distance between two points on the ground, in km.
-def distance_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+# Distance between two points on the ground, in km. Works on single numbers
+# or whole columns.
+def distance_km(lat1, lon1, lat2, lon2):
     # Turn the differences into radians
-    lat_change = math.radians(lat2 - lat1)
-    lon_change = math.radians(lon2 - lon1)
+    lat_change = np.radians(lat2 - lat1)
+    lon_change = np.radians(lon2 - lon1)
 
     # Haversine formula
     a = (
-        math.sin(lat_change / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(lon_change / 2) ** 2
+        np.sin(lat_change / 2) ** 2
+        + np.cos(np.radians(lat1))
+        * np.cos(np.radians(lat2))
+        * np.sin(lon_change / 2) ** 2
     )
-    return 2 * config.EARTH_RADIUS_KM * math.asin(math.sqrt(a))
+    return 2 * config.EARTH_RADIUS_KM * np.arcsin(np.sqrt(a))
 
 
 # Readings of a storm feed from a few hours before the start to the end.
@@ -315,6 +315,44 @@ def equipment_fault_signs(rows: pd.DataFrame, feeds: dict) -> list[dict]:
             reports,
             "interference report nearby, which points to jamming instead",
             describe_reports(reports, start),
+        ),
+    ]
+
+
+# Signs for multipath: a short dip on one tractor, often at the same spot.
+def multipath_signs(rows: pd.DataFrame, tested: pd.DataFrame) -> list[dict]:
+    # Length, tractors, and place of the dip
+    length_s = (rows["end"].max() - rows["start"].min()).total_seconds()
+    tractors = sorted(rows["tractor"].unique())
+    lat = rows["lat"].mean()
+    lon = rows["lon"].mean()
+    average_drop = rows["signal_mean_drop_max_db"].max()
+
+    # Other multipath dips at about the same spot
+    others = tested[(tested["cause"] == "MULTIPATH") & ~tested.index.isin(rows.index)]
+    others_m = 1000 * distance_km(lat, lon, others["lat"], others["lon"])
+    same_spot = int((others_m <= config.SAME_SPOT_M).sum())
+
+    return [
+        sign(
+            "for",
+            length_s <= 60 * config.SHORT_EPISODE_MIN,
+            "short dip",
+            f"{length_s:.0f} s, short is {config.SHORT_EPISODE_MIN} min or less",
+        ),
+        sign("for", len(tractors) == 1, "only one tractor hit", ", ".join(tractors)),
+        sign(
+            "for",
+            average_drop < config.HEALTHY_MAX_DROP_DB,
+            "average signal stayed normal, so only some satellites were blocked",
+            f"at most {max(average_drop, 0):.1f} dB below usual, normal is under "
+            f"{config.HEALTHY_MAX_DROP_DB:.0f} dB",
+        ),
+        sign(
+            "bonus",
+            same_spot >= 1,
+            "other dips at the same spot",
+            f"{same_spot} other dips within {config.SAME_SPOT_M} m",
         ),
     ]
 
