@@ -72,3 +72,8 @@ FIX_RANK = {"NO_FIX": 0, "AUTONOMOUS": 1, "DGPS": 2, "RTK_FLOAT": 3, "RTK_FIXED"
 
 # A minute is working if more 50% of its seconds are working. fixed
 WORKING_MINUTE_SHARE = 0.5
+
+# Scoring rules
+# A detection matches a label only if both overlaps reach these. fixed
+MATCH_TIME_IOU = 0.30
+MATCH_TRACTOR_IOU = 0.50

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from . import config
+
 
 # Read detections or labels from a file.
 def read_items(path: Path, key: str) -> list[dict]:
@@ -41,3 +43,12 @@ def tractor_iou(a: dict, b: dict) -> float:
     # Shared tractors divided by all tractors (0 if both lists are empty)
     union = a_set | b_set
     return len(a_set & b_set) / len(union) if union else 0.0
+
+
+# The time and tractor overlap of a pair, or None if they're too far apart to match.
+def pair_overlap(detection: dict, label: dict) -> tuple[float, float] | None:
+    time_overlap = time_iou(detection, label)
+    tractor_overlap = tractor_iou(detection, label)
+    if time_overlap >= config.MATCH_TIME_IOU and tractor_overlap >= config.MATCH_TRACTOR_IOU:
+        return time_overlap, tractor_overlap
+    return None
