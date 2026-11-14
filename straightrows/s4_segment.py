@@ -115,6 +115,42 @@ def find_dips(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
     return table
 
 
+# Find smooth drifts off the line, each its own candidate.
+def find_drifts(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
+    # Set up the window and the block size
+    window_start, window_end = config.WINDOWS[window]
+    block = pd.Timedelta(minutes=config.DRIFT_BLOCK_MIN)
+    max_step = block * (config.DRIFT_MAX_GAP_BLOCKS + 1)
+
+    # Check one tractor at a time, using only working seconds
+    drifts = []
+    working = telemetry[telemetry["working"]]
+    for tractor, seconds in working.groupby("tractor_id"):
+        line_error = seconds.set_index("ts")["cross_track_error_m"]
+
+        # Median and spread of each block
+        blocks = line_error.resample(block).agg(["median", "std"])
+
+        # A block drifts if it is far off the line but steady, unlike noise
+        drifting = blocks[
+            (blocks["median"] >= config.DRIFT_MEDIAN_M)
+            & (blocks["std"] < config.DRIFT_SPREAD_M)
+        ].index.to_series()
+
+        # Start a new drift when the gap to the last drifting block is too big
+        run_number = (drifting.diff() > max_step).cumsum()
+        for _, run in drifting.groupby(run_number):
+            start = run.iloc[0]
+            if window_start <= start < window_end:
+                end = run.iloc[-1] + block
+                drifts.append({"tractor": tractor, "start": start, "end": end})
+
+    # Make the table and label the kind
+    table = pd.DataFrame(drifts, columns=["tractor", "start", "end"])
+    table["kind"] = "drift"
+    return table
+
+
 # Find every candidate: link and signal episodes from the minutes, dips from the
 # seconds.
 def find_candidates(

@@ -126,6 +126,14 @@ DIP_DROP_DB = 5.0
 DIP_NORMAL_WINDOW_S = 120
 # Shortest dip reported as multipath, to stay under 500 detections. fixed
 MIN_DIP_S = 10
+# Minutes in each block when looking for a smooth drift off the line. fixed
+DRIFT_BLOCK_MIN = 3
+# A block drifts if its median cross-track error reaches this. fixed
+DRIFT_MEDIAN_M = 1.0
+# its cross-track error spread (standard deviation) stays under this. fixed
+DRIFT_SPREAD_M = 0.3
+# Drifting blocks this many blocks apart or closer join into one drift. fixed
+DRIFT_MAX_GAP_BLOCKS = 1
 
 # Cause test settings
 # Look this far before an episode for signal flicker (S4) readings. fixed
