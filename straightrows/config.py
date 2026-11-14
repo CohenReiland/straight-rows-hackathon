@@ -158,3 +158,15 @@ FLEET_OK_DROP_DB = 2.5
 HIGH_FLICKER_S4 = 0.3
 # Causes that stay on one tractor and never join across tractors. fixed (guide)
 ONE_TRACTOR_CAUSES = ["EQUIPMENT_FAULT", "MULTIPATH"]
+
+# Evidence and confidence settings
+# Satellite count is normal if it fell at most this many below usual. fixed
+SATS_NORMAL_DROP = 2
+# Confidence starts at the floor and reaches the signs cap when every sign is
+# seen. Only bonus signs take it up to the cap. fixed (judgment)
+CONFIDENCE_FLOOR = 0.40
+CONFIDENCE_SIGNS_CAP = 0.85
+CONFIDENCE_CAP = 0.95
+# Added for each bonus sign seen, taken off for each sign against. fixed
+CONFIDENCE_BONUS = 0.10
+CONFIDENCE_PENALTY = 0.15
