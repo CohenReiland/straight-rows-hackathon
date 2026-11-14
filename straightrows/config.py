@@ -117,3 +117,11 @@ MAX_GAP_MIN = 3
 # Cause test settings
 # Look this far before an episode for signal flicker (S4) readings. fixed
 FLICKER_LOOKBACK_MIN_S4 = 15
+# Episodes this many minutes or shorter are short (multipath). fixed
+SHORT_EPISODE_MIN = 3
+# The signal is healthy if the average stayed within this much of normal. learned
+HEALTHY_MAX_DROP_DB = 3.0
+# The fleet is fine if the other tractors dropped less than this. learned
+FLEET_OK_DROP_DB = 2.5
+# Signal flicker (S4) at or above this means a storm. fixed 
+HIGH_FLICKER_S4 = 0.3

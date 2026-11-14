@@ -58,3 +58,46 @@ def measure(
         ].mean(),
         "signal_flicker_s4_max": nearby_flicker["signal_flicker_s4"].max(),
     }
+
+
+# Return the causes this candidate passes.
+def passing_causes(numbers: dict, kind: str) -> list[str]:
+    # Facts several tests share
+    short = numbers["duration_min"] <= config.SHORT_EPISODE_MIN
+
+    # Healthy means the average barely dropped and the weakest satellite stayed up
+    healthy = (
+        numbers["signal_mean_drop_max_db"] < config.HEALTHY_MAX_DROP_DB
+        and numbers["signal_weakest_drop_median_db"] < config.BAD_WEAKEST_DROP_DB
+    )
+
+    # Fleet is fine if no other tractor was working, or they barely dropped
+    fleet_drop = numbers["fleet_signal_mean_drop_db"]
+    fleet_ok = pd.isna(fleet_drop) or fleet_drop < config.FLEET_OK_DROP_DB
+
+    # A link episode only tests the link causes
+    if kind == "link":
+        cause_tests = {"MULTIPATH": short, "EQUIPMENT_FAULT": not short}
+        return [cause for cause, passed in cause_tests.items() if passed]
+
+    # Storms make the signal flicker, jamming doesn't
+    high_flicker = numbers["signal_flicker_s4_max"] >= config.HIGH_FLICKER_S4
+
+    # Regional means the other tractors dropped too
+    regional = not short and not healthy and not fleet_ok
+
+    # Far off the line, with the base link fine (a lost link explains the drift)
+    off_line = numbers["cross_track_error_max_m"] > config.BAD_CROSS_TRACK_ERROR_M
+    link_fine = not numbers["base_link_lost"]
+
+    # One test per cause
+    cause_tests = {
+        "MULTIPATH": short,
+        "EQUIPMENT_FAULT": not short and not healthy and fleet_ok,
+        "SPACE_WEATHER": regional and high_flicker,
+        "SPOOFING": not short and healthy and off_line and link_fine,
+        "JAMMING": regional and not high_flicker,
+    }
+
+    # Keep the causes that passed
+    return [cause for cause, passed in cause_tests.items() if passed]
