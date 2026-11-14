@@ -75,20 +75,24 @@ def add_drop_from_normal(minutes: pd.DataFrame, labels: pd.DataFrame) -> pd.Data
     return minutes
 
 
+# For each tractor in one minute, the biggest drop of the others (blank if none).
+def biggest_of_others(drops: pd.Series) -> pd.Series:
+    return pd.Series(
+        [drops.drop(index).max() for index in drops.index], index=drops.index
+    )
+
+
 # Add how the other working tractors did in the same minute.
 def add_fleet_comparison(minutes: pd.DataFrame) -> pd.DataFrame:
-    # Only count working tractors for the fleet
-    own_drop = minutes["signal_mean_drop_db"].where(minutes["working"], 0)
-    is_working = minutes["working"].astype(int)
+    # Only count working tractors for the fleet (parked ones are blank)
+    working_drop = minutes["signal_mean_drop_db"].where(minutes["working"])
 
-    # Add up the whole fleet each minute
-    fleet_total = own_drop.groupby(minutes["minute"]).transform("sum")
-    fleet_count = is_working.groupby(minutes["minute"]).transform("sum")
-
-    # Average drop of the other working tractors. Blank if no other tractor is working
+    # Biggest drop of the other working tractors, not their average, so a jammer
+    # that misses one tractor still counts as regional. Blank if alone
     minutes = minutes.copy()
-    others_count = (fleet_count - is_working).replace(0, float("nan"))
-    minutes["fleet_signal_mean_drop_db"] = (fleet_total - own_drop) / others_count
+    minutes["fleet_worst_signal_mean_drop_db"] = working_drop.groupby(
+        minutes["minute"]
+    ).transform(biggest_of_others)
 
     # True if another working tractor lost its base link that minute
     own_lost = (minutes["base_link_lost"] & minutes["working"]).astype(int)

@@ -22,7 +22,7 @@ def is_signal_bad(minutes: pd.DataFrame) -> pd.Series:
 
 
 # True for working minutes that are still partially off the normal, used to stretch
-# episodes. Not called yet: stretching waits for step 7 (D56).
+# episodes. Not called yet: stretching waits for step 7.
 def is_signal_weak(minutes: pd.DataFrame) -> pd.Series:
     return minutes["working"] & (
         (minutes["signal_mean_drop_db"] >= config.WEAK_MEAN_DROP_DB)
@@ -78,8 +78,48 @@ def find_runs(
     return table
 
 
-# Join bad minutes into episodes, one list for each kind.
-def find_candidates(minutes: pd.DataFrame, window: str) -> pd.DataFrame:
+# Find short dips of the weakest satellite in the 1-second data, for multipath.
+def find_dips(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
+    # Set up the window and the normal for each second
+    window_start, window_end = config.WINDOWS[window]
+    normal_size = config.DIP_NORMAL_WINDOW_S + 1
+    one_second = pd.Timedelta(seconds=1)
+
+    # Check one tractor at a time
+    dips = []
+    for tractor, seconds in telemetry.groupby("tractor_id"):
+        seconds = seconds.sort_values("ts").reset_index(drop=True)
+
+        # Normal = median of the weakest satellite over the seconds around it
+        weakest = seconds["signal_weakest_db"]
+        normal = weakest.rolling(
+            normal_size, center=True, min_periods=normal_size // 4
+        ).median()
+
+        # Seconds well under that normal while working
+        low = seconds["working"] & (normal - weakest >= config.DIP_DROP_DB)
+
+        # Number each run of low seconds, then keep the long enough ones
+        run_number = (low != low.shift()).cumsum()
+        for _, run in seconds[low].groupby(run_number[low]):
+            if len(run) < config.MIN_DIP_S:
+                continue
+            start = run["ts"].iloc[0]
+            if window_start <= start < window_end:
+                end = run["ts"].iloc[-1] + one_second
+                dips.append({"tractor": tractor, "start": start, "end": end})
+
+    # Make the table and label the kind
+    table = pd.DataFrame(dips, columns=["tractor", "start", "end"])
+    table["kind"] = "dip"
+    return table
+
+
+# Find every candidate: link and signal episodes from the minutes, dips from the
+# seconds.
+def find_candidates(
+    minutes: pd.DataFrame, telemetry: pd.DataFrame, window: str
+) -> pd.DataFrame:
     # Keep the minutes in this window
     window_start, window_end = config.WINDOWS[window]
     in_window = minutes[
@@ -90,5 +130,8 @@ def find_candidates(minutes: pd.DataFrame, window: str) -> pd.DataFrame:
     link = find_runs(in_window[is_link_bad(in_window)], window_end, "link")
     signal = find_runs(in_window[is_signal_bad(in_window)], window_end, "signal")
 
+    # Find the short dips for multipath
+    dips = find_dips(telemetry, window)
+
     # Put them in one table
-    return pd.concat([link, signal], ignore_index=True)
+    return pd.concat([link, signal, dips], ignore_index=True)

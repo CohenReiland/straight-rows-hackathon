@@ -12,10 +12,10 @@ def measure(
     telemetry: pd.DataFrame,
     signal_flicker: pd.DataFrame,
 ) -> dict:
-    # Get this episode's minutes
+    # Get this episode's minutes, including the minute a dip starts in
     episode_minutes = minutes[
         (minutes["tractor_id"] == candidate["tractor"])
-        & (minutes["minute"] >= candidate["start"])
+        & (minutes["minute"] >= candidate["start"].floor("min"))
         & (minutes["minute"] < candidate["end"])
     ]
 
@@ -53,8 +53,8 @@ def measure(
         "fleet_base_link_lost": bool(episode_minutes["fleet_base_link_lost"].any()),
         "lat": seconds["lat"].mean(),
         "lon": seconds["lon"].mean(),
-        "fleet_signal_mean_drop_db": episode_minutes[
-            "fleet_signal_mean_drop_db"
+        "fleet_worst_signal_mean_drop_db": episode_minutes[
+            "fleet_worst_signal_mean_drop_db"
         ].mean(),
         "signal_flicker_s4_max": nearby_flicker["signal_flicker_s4"].max(),
     }
@@ -71,9 +71,13 @@ def passing_causes(numbers: dict, kind: str) -> list[str]:
         and numbers["signal_weakest_drop_median_db"] < config.BAD_WEAKEST_DROP_DB
     )
 
-    # Fleet is fine if no other tractor was working, or they barely dropped
-    fleet_drop = numbers["fleet_signal_mean_drop_db"]
+    # Fleet is fine if no other tractor was working, or even the worst barely dropped
+    fleet_drop = numbers["fleet_worst_signal_mean_drop_db"]
     fleet_ok = pd.isna(fleet_drop) or fleet_drop < config.FLEET_OK_DROP_DB
+
+    # A dip is only ever multipath
+    if kind == "dip":
+        return ["MULTIPATH"]
 
     # A link episode only tests the link causes
     if kind == "link":

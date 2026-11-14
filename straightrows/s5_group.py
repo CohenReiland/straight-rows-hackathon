@@ -32,7 +32,15 @@ def group_events(candidates: pd.DataFrame) -> pd.DataFrame:
     # Sort by start time
     candidates = candidates.sort_values("start").reset_index(drop=True)
 
-    # Overlapping candidates are one event
-    candidates["event"] = overlap_numbers(candidates["start"], candidates["end"])
+    # Overlapping episodes are one event (dips are left out)
+    is_dip = candidates["kind"] == "dip"
+    episodes = candidates[~is_dip]
+    numbers = overlap_numbers(episodes["start"], episodes["end"])
+    candidates["event"] = 0
+    candidates.loc[~is_dip, "event"] = numbers
+
+    # Each dip is its own event, numbered after the episodes
+    first_dip = max(numbers) + 1 if numbers else 0
+    candidates.loc[is_dip, "event"] = range(first_dip, first_dip + int(is_dip.sum()))
 
     return candidates
