@@ -389,3 +389,59 @@ def sign_lines(signs: list[dict]) -> list[str]:
             prefix = "Seen" if s["seen"] else "Not seen"
         lines.append(f"{prefix}: {s['label']} ({s['detail']}).")
     return lines
+
+# What each cause means, in plain words, for the summary line
+CAUSE_MEANING = {
+    "SPACE_WEATHER": "a space storm disturbing the satellite signals",
+    "JAMMING": "a radio transmitter drowning out the satellite signals",
+    "SPOOFING": "fake satellite signals pulling the position off",
+    "EQUIPMENT_FAULT": "a problem with the tractor's own equipment",
+    "MULTIPATH": "satellite signals bouncing off nearby objects",
+}
+
+
+# Check the signs for a detection's cause. Return its evidence and confidence.
+def explain(
+    cause: str, rows: pd.DataFrame, tested: pd.DataFrame, feeds: dict
+) -> tuple[list[str], float]:
+    # Get the signs for this cause
+    if cause == "SPACE_WEATHER":
+        signs = space_weather_signs(rows, feeds)
+    elif cause == "JAMMING":
+        signs = jamming_signs(rows, feeds)
+    elif cause == "SPOOFING":
+        signs = spoofing_signs(rows)
+    elif cause == "EQUIPMENT_FAULT":
+        signs = equipment_fault_signs(rows, feeds)
+    else:
+        signs = multipath_signs(rows, tested)
+    score = confidence(signs)
+
+    # Times, tractors, and length, in seconds when short
+    start = rows["start"].min()
+    end = rows["end"].max()
+    tractors = ", ".join(sorted(rows["tractor"].unique()))
+    length_s = (end - start).total_seconds()
+    if length_s < 60 * config.SHORT_EPISODE_MIN:
+        length = f"{length_s:.0f} s"
+    else:
+        length = f"{length_s / 60:.0f} min"
+
+    # Count the signs seen of each kind
+    counts = []
+    for kind, name in [("for", "signs"), ("bonus", "bonus signs")]:
+        of_kind = [s for s in signs if s["kind"] == kind]
+        if of_kind:
+            seen = sum(s["seen"] for s in of_kind)
+            counts.append(f"{seen} of {len(of_kind)} {name} seen")
+    if any(s["kind"] == "against" for s in signs):
+        against = sum(s["seen"] for s in signs if s["kind"] == "against")
+        counts.append(f"{against} against")
+
+    # Summary, confidence, then one line per sign
+    lines = [
+        f"{cause} on {tractors}, {start:%Y-%m-%d %H:%M:%S} to {end:%H:%M:%S} UTC "
+        f"({length}): {CAUSE_MEANING[cause]}.",
+        f"Confidence {score:.2f}: {', '.join(counts)}.",
+    ]
+    return lines + sign_lines(signs), score

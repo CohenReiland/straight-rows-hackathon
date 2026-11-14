@@ -4,7 +4,7 @@ import sys
 
 import pandas as pd
 
-from . import config, s5_group
+from . import config, evidence, s5_group
 
 # If several causes pass, the first one wins
 PRIORITY = ["MULTIPATH", "SPOOFING", "SPACE_WEATHER", "JAMMING", "EQUIPMENT_FAULT"]
@@ -82,15 +82,9 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
         end = same_cause["end"].max()
         tractors = sorted(same_cause["tractor"].unique())
 
-        # TODO step 8: replace this placeholder with evidence.explain(cause,
-        # same_cause, tested, feeds), which checks the signs and sets the
-        # confidence. Until then every detection gets 0.5 and one line.
-        # Also port add_overlap_notes then, to name the other causes in an event.
-        score = 0.5
-        lines = [
-            f"Bad minutes on {', '.join(tractors)} from {start:%H:%M} to {end:%H:%M}; "
-            f"the {cause} test passed."
-        ]
+        # Check the signs and write the evidence
+        # TODO step 8: add add_overlap_notes, to name the overlapping detections
+        lines, score = evidence.explain(cause, same_cause, tested, feeds)
 
         detections.append(
             {
