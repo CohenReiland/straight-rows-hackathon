@@ -79,6 +79,10 @@ def passing_causes(numbers: dict, kind: str) -> list[str]:
     if kind == "dip":
         return ["MULTIPATH"]
 
+    # A drift is only ever spoofing, and only if the base link was fine
+    if kind == "drift":
+        return [] if numbers["base_link_lost"] else ["SPOOFING"]
+
     # A link episode only tests the link causes
     if kind == "link":
         cause_tests = {"MULTIPATH": short, "EQUIPMENT_FAULT": not short}
@@ -89,6 +93,11 @@ def passing_causes(numbers: dict, kind: str) -> list[str]:
 
     # Regional means the other tractors dropped too
     regional = not short and not healthy and not fleet_ok
+
+    # A step is jamming if the other tractors stepped too. Flicker is skipped,
+    # since a storm underneath keeps it high
+    if kind == "step":
+        return ["JAMMING"] if regional else []
 
     # Far off the line, with the base link fine (a lost link explains the drift)
     off_line = numbers["cross_track_error_max_m"] > config.BAD_CROSS_TRACK_ERROR_M

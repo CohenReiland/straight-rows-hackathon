@@ -6,15 +6,15 @@
   "detections": [
     {
       "start": "2026-05-06T00:02:49Z",
-      "end": "2026-05-06T00:03:06Z",
+      "end": "2026-05-06T00:03:01Z",
       "tractors": [
-        "T3"
+        "T1"
       ],
       "class": "MULTIPATH",
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T3 from 00:02 to 00:03; the MULTIPATH test passed."
+        "Bad minutes on T1 from 00:02 to 00:03; the MULTIPATH test passed."
       ]
     },
     {
@@ -32,15 +32,15 @@
     },
     {
       "start": "2026-05-06T00:02:49Z",
-      "end": "2026-05-06T00:03:01Z",
+      "end": "2026-05-06T00:03:06Z",
       "tractors": [
-        "T1"
+        "T3"
       ],
       "class": "MULTIPATH",
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T1 from 00:02 to 00:03; the MULTIPATH test passed."
+        "Bad minutes on T3 from 00:02 to 00:03; the MULTIPATH test passed."
       ]
     },
     {
@@ -97,19 +97,6 @@
     },
     {
       "start": "2026-05-06T00:20:35Z",
-      "end": "2026-05-06T00:20:52Z",
-      "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 00:20 to 00:20; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T00:20:35Z",
       "end": "2026-05-06T00:20:46Z",
       "tractors": [
         "T1"
@@ -119,6 +106,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 00:20 to 00:20; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T00:20:35Z",
+      "end": "2026-05-06T00:20:52Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 00:20 to 00:20; the MULTIPATH test passed."
       ]
     },
     {
@@ -240,19 +240,6 @@
     },
     {
       "start": "2026-05-06T00:56:09Z",
-      "end": "2026-05-06T00:56:26Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 00:56 to 00:56; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T00:56:09Z",
       "end": "2026-05-06T00:56:24Z",
       "tractors": [
         "T1"
@@ -275,6 +262,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 00:56 to 00:56; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T00:56:09Z",
+      "end": "2026-05-06T00:56:26Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 00:56 to 00:56; the MULTIPATH test passed."
       ]
     },
     {
@@ -448,19 +448,6 @@
     },
     {
       "start": "2026-05-06T01:31:46Z",
-      "end": "2026-05-06T01:31:58Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 01:31 to 01:31; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T01:31:46Z",
       "end": "2026-05-06T01:31:59Z",
       "tractors": [
         "T1"
@@ -473,16 +460,16 @@
       ]
     },
     {
-      "start": "2026-05-06T01:37:38Z",
-      "end": "2026-05-06T01:37:55Z",
+      "start": "2026-05-06T01:31:46Z",
+      "end": "2026-05-06T01:31:58Z",
       "tractors": [
-        "T2"
+        "T3"
       ],
       "class": "MULTIPATH",
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T2 from 01:37 to 01:37; the MULTIPATH test passed."
+        "Bad minutes on T3 from 01:31 to 01:31; the MULTIPATH test passed."
       ]
     },
     {
@@ -496,6 +483,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 01:37 to 01:37; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T01:37:38Z",
+      "end": "2026-05-06T01:37:55Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 01:37 to 01:37; the MULTIPATH test passed."
       ]
     },
     {
@@ -513,19 +513,6 @@
     },
     {
       "start": "2026-05-06T01:49:29Z",
-      "end": "2026-05-06T01:49:45Z",
-      "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 01:49 to 01:49; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T01:49:29Z",
       "end": "2026-05-06T01:49:46Z",
       "tractors": [
         "T1"
@@ -535,6 +522,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 01:49 to 01:49; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T01:49:29Z",
+      "end": "2026-05-06T01:49:45Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 01:49 to 01:49; the MULTIPATH test passed."
       ]
     },
     {
@@ -699,19 +699,6 @@
       "start": "2026-05-06T02:54:40Z",
       "end": "2026-05-06T02:54:57Z",
       "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 02:54 to 02:54; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T02:54:40Z",
-      "end": "2026-05-06T02:54:57Z",
-      "tractors": [
         "T1"
       ],
       "class": "MULTIPATH",
@@ -719,6 +706,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 02:54 to 02:54; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T02:54:40Z",
+      "end": "2026-05-06T02:54:57Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 02:54 to 02:54; the MULTIPATH test passed."
       ]
     },
     {
@@ -881,6 +881,19 @@
       "start": "2026-05-06T11:42:04Z",
       "end": "2026-05-06T11:42:15Z",
       "tractors": [
+        "T1"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T1 from 11:42 to 11:42; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T11:42:04Z",
+      "end": "2026-05-06T11:42:15Z",
+      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -904,19 +917,6 @@
       ]
     },
     {
-      "start": "2026-05-06T11:42:04Z",
-      "end": "2026-05-06T11:42:15Z",
-      "tractors": [
-        "T1"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T1 from 11:42 to 11:42; the MULTIPATH test passed."
-      ]
-    },
-    {
       "start": "2026-05-06T11:48:00Z",
       "end": "2026-05-06T11:48:17Z",
       "tractors": [
@@ -927,19 +927,6 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T3 from 11:48 to 11:48; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T11:53:56Z",
-      "end": "2026-05-06T11:54:09Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 11:53 to 11:54; the MULTIPATH test passed."
       ]
     },
     {
@@ -966,6 +953,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 11:53 to 11:54; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T11:53:56Z",
+      "end": "2026-05-06T11:54:09Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 11:53 to 11:54; the MULTIPATH test passed."
       ]
     },
     {
@@ -1037,19 +1037,6 @@
       "start": "2026-05-06T12:11:42Z",
       "end": "2026-05-06T12:11:59Z",
       "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 12:11 to 12:11; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T12:11:42Z",
-      "end": "2026-05-06T12:11:59Z",
-      "tractors": [
         "T1"
       ],
       "class": "MULTIPATH",
@@ -1057,6 +1044,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 12:11 to 12:11; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T12:11:42Z",
+      "end": "2026-05-06T12:11:59Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 12:11 to 12:11; the MULTIPATH test passed."
       ]
     },
     {
@@ -1115,19 +1115,6 @@
       "start": "2026-05-06T12:23:33Z",
       "end": "2026-05-06T12:23:50Z",
       "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 12:23 to 12:23; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T12:23:33Z",
-      "end": "2026-05-06T12:23:50Z",
-      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -1135,6 +1122,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 12:23 to 12:23; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T12:23:33Z",
+      "end": "2026-05-06T12:23:50Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 12:23 to 12:23; the MULTIPATH test passed."
       ]
     },
     {
@@ -1429,19 +1429,6 @@
       "start": "2026-05-06T13:46:31Z",
       "end": "2026-05-06T13:46:48Z",
       "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 13:46 to 13:46; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T13:46:31Z",
-      "end": "2026-05-06T13:46:48Z",
-      "tractors": [
         "T1"
       ],
       "class": "MULTIPATH",
@@ -1449,6 +1436,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 13:46 to 13:46; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T13:46:31Z",
+      "end": "2026-05-06T13:46:48Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 13:46 to 13:46; the MULTIPATH test passed."
       ]
     },
     {
@@ -1507,19 +1507,6 @@
       "start": "2026-05-06T14:04:18Z",
       "end": "2026-05-06T14:04:35Z",
       "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 14:04 to 14:04; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T14:04:18Z",
-      "end": "2026-05-06T14:04:35Z",
-      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -1527,6 +1514,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 14:04 to 14:04; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T14:04:18Z",
+      "end": "2026-05-06T14:04:35Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 14:04 to 14:04; the MULTIPATH test passed."
       ]
     },
     {
@@ -1700,15 +1700,15 @@
     },
     {
       "start": "2026-05-06T14:39:51Z",
-      "end": "2026-05-06T14:40:01Z",
+      "end": "2026-05-06T14:40:08Z",
       "tractors": [
-        "T3"
+        "T1"
       ],
       "class": "MULTIPATH",
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T3 from 14:39 to 14:40; the MULTIPATH test passed."
+        "Bad minutes on T1 from 14:39 to 14:40; the MULTIPATH test passed."
       ]
     },
     {
@@ -1726,15 +1726,15 @@
     },
     {
       "start": "2026-05-06T14:39:51Z",
-      "end": "2026-05-06T14:40:08Z",
+      "end": "2026-05-06T14:40:01Z",
       "tractors": [
-        "T1"
+        "T3"
       ],
       "class": "MULTIPATH",
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T1 from 14:39 to 14:40; the MULTIPATH test passed."
+        "Bad minutes on T3 from 14:39 to 14:40; the MULTIPATH test passed."
       ]
     },
     {
@@ -1793,6 +1793,19 @@
       "start": "2026-05-06T14:57:38Z",
       "end": "2026-05-06T14:57:55Z",
       "tractors": [
+        "T1"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T1 from 14:57 to 14:57; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T14:57:38Z",
+      "end": "2026-05-06T14:57:55Z",
+      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -1816,8 +1829,8 @@
       ]
     },
     {
-      "start": "2026-05-06T14:57:38Z",
-      "end": "2026-05-06T14:57:55Z",
+      "start": "2026-05-06T15:03:33Z",
+      "end": "2026-05-06T15:03:50Z",
       "tractors": [
         "T1"
       ],
@@ -1825,7 +1838,7 @@
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T1 from 14:57 to 14:57; the MULTIPATH test passed."
+        "Bad minutes on T1 from 15:03 to 15:03; the MULTIPATH test passed."
       ]
     },
     {
@@ -1839,19 +1852,6 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 15:03 to 15:03; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T15:03:33Z",
-      "end": "2026-05-06T15:03:50Z",
-      "tractors": [
-        "T1"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T1 from 15:03 to 15:03; the MULTIPATH test passed."
       ]
     },
     {
@@ -1910,19 +1910,6 @@
       "start": "2026-05-06T15:15:24Z",
       "end": "2026-05-06T15:15:41Z",
       "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 15:15 to 15:15; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T15:15:24Z",
-      "end": "2026-05-06T15:15:41Z",
-      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -1933,8 +1920,8 @@
       ]
     },
     {
-      "start": "2026-05-06T15:21:25Z",
-      "end": "2026-05-06T15:21:35Z",
+      "start": "2026-05-06T15:15:24Z",
+      "end": "2026-05-06T15:15:41Z",
       "tractors": [
         "T3"
       ],
@@ -1942,7 +1929,7 @@
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T3 from 15:21 to 15:21; the MULTIPATH test passed."
+        "Bad minutes on T3 from 15:15 to 15:15; the MULTIPATH test passed."
       ]
     },
     {
@@ -1956,6 +1943,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 15:21 to 15:21; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T15:21:25Z",
+      "end": "2026-05-06T15:21:35Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 15:21 to 15:21; the MULTIPATH test passed."
       ]
     },
     {
@@ -2079,19 +2079,6 @@
       "start": "2026-05-06T15:50:58Z",
       "end": "2026-05-06T15:51:15Z",
       "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 15:50 to 15:51; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T15:50:58Z",
-      "end": "2026-05-06T15:51:15Z",
-      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -2099,6 +2086,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 15:50 to 15:51; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T15:50:58Z",
+      "end": "2026-05-06T15:51:15Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 15:50 to 15:51; the MULTIPATH test passed."
       ]
     },
     {
@@ -2298,19 +2298,6 @@
     },
     {
       "start": "2026-05-06T16:50:13Z",
-      "end": "2026-05-06T16:50:30Z",
-      "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 16:50 to 16:50; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T16:50:13Z",
       "end": "2026-05-06T16:50:29Z",
       "tractors": [
         "T1"
@@ -2320,6 +2307,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 16:50 to 16:50; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T16:50:13Z",
+      "end": "2026-05-06T16:50:30Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 16:50 to 16:50; the MULTIPATH test passed."
       ]
     },
     {
@@ -2352,6 +2352,19 @@
       "start": "2026-05-06T17:02:04Z",
       "end": "2026-05-06T17:02:21Z",
       "tractors": [
+        "T1"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T1 from 17:02 to 17:02; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T17:02:04Z",
+      "end": "2026-05-06T17:02:21Z",
+      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -2372,19 +2385,6 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T3 from 17:02 to 17:02; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T17:02:04Z",
-      "end": "2026-05-06T17:02:21Z",
-      "tractors": [
-        "T1"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T1 from 17:02 to 17:02; the MULTIPATH test passed."
       ]
     },
     {
@@ -2794,19 +2794,6 @@
     },
     {
       "start": "2026-05-06T18:48:44Z",
-      "end": "2026-05-06T18:48:54Z",
-      "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 18:48 to 18:48; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T18:48:44Z",
       "end": "2026-05-06T18:49:01Z",
       "tractors": [
         "T1"
@@ -2898,19 +2885,6 @@
     },
     {
       "start": "2026-05-06T19:18:22Z",
-      "end": "2026-05-06T19:18:38Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 19:18 to 19:18; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T19:18:22Z",
       "end": "2026-05-06T19:18:39Z",
       "tractors": [
         "T2"
@@ -2920,6 +2894,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 19:18 to 19:18; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T19:18:22Z",
+      "end": "2026-05-06T19:18:38Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 19:18 to 19:18; the MULTIPATH test passed."
       ]
     },
     {
@@ -2978,19 +2965,6 @@
       "start": "2026-05-06T19:36:09Z",
       "end": "2026-05-06T19:36:26Z",
       "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 19:36 to 19:36; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T19:36:09Z",
-      "end": "2026-05-06T19:36:26Z",
-      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -3001,8 +2975,8 @@
       ]
     },
     {
-      "start": "2026-05-06T19:42:04Z",
-      "end": "2026-05-06T19:42:21Z",
+      "start": "2026-05-06T19:36:09Z",
+      "end": "2026-05-06T19:36:26Z",
       "tractors": [
         "T3"
       ],
@@ -3010,7 +2984,7 @@
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T3 from 19:42 to 19:42; the MULTIPATH test passed."
+        "Bad minutes on T3 from 19:36 to 19:36; the MULTIPATH test passed."
       ]
     },
     {
@@ -3024,6 +2998,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 19:42 to 19:42; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T19:42:04Z",
+      "end": "2026-05-06T19:42:21Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 19:42 to 19:42; the MULTIPATH test passed."
       ]
     },
     {
@@ -3043,19 +3030,6 @@
       "start": "2026-05-06T19:48:00Z",
       "end": "2026-05-06T19:48:17Z",
       "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 19:48 to 19:48; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T19:48:00Z",
-      "end": "2026-05-06T19:48:17Z",
-      "tractors": [
         "T2"
       ],
       "class": "MULTIPATH",
@@ -3063,6 +3037,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 19:48 to 19:48; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T19:48:00Z",
+      "end": "2026-05-06T19:48:17Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 19:48 to 19:48; the MULTIPATH test passed."
       ]
     },
     {
@@ -3197,19 +3184,6 @@
     },
     {
       "start": "2026-05-06T20:17:38Z",
-      "end": "2026-05-06T20:17:50Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 20:17 to 20:17; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T20:17:38Z",
       "end": "2026-05-06T20:17:54Z",
       "tractors": [
         "T2"
@@ -3219,6 +3193,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 20:17 to 20:17; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T20:17:38Z",
+      "end": "2026-05-06T20:17:50Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 20:17 to 20:17; the MULTIPATH test passed."
       ]
     },
     {
@@ -3587,19 +3574,6 @@
     },
     {
       "start": "2026-05-06T21:34:40Z",
-      "end": "2026-05-06T21:34:52Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 21:34 to 21:34; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T21:34:40Z",
       "end": "2026-05-06T21:34:57Z",
       "tractors": [
         "T2"
@@ -3609,6 +3583,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 21:34 to 21:34; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T21:34:40Z",
+      "end": "2026-05-06T21:34:52Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 21:34 to 21:34; the MULTIPATH test passed."
       ]
     },
     {
@@ -3641,19 +3628,6 @@
       "start": "2026-05-06T21:46:31Z",
       "end": "2026-05-06T21:46:48Z",
       "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 21:46 to 21:46; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T21:46:31Z",
-      "end": "2026-05-06T21:46:48Z",
-      "tractors": [
         "T1"
       ],
       "class": "MULTIPATH",
@@ -3661,6 +3635,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 21:46 to 21:46; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T21:46:31Z",
+      "end": "2026-05-06T21:46:48Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 21:46 to 21:46; the MULTIPATH test passed."
       ]
     },
     {
@@ -3678,19 +3665,6 @@
     },
     {
       "start": "2026-05-06T21:52:27Z",
-      "end": "2026-05-06T21:52:39Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 21:52 to 21:52; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T21:52:27Z",
       "end": "2026-05-06T21:52:42Z",
       "tractors": [
         "T1"
@@ -3700,6 +3674,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 21:52 to 21:52; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T21:52:27Z",
+      "end": "2026-05-06T21:52:39Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 21:52 to 21:52; the MULTIPATH test passed."
       ]
     },
     {
@@ -3860,19 +3847,6 @@
     },
     {
       "start": "2026-05-06T22:39:51Z",
-      "end": "2026-05-06T22:40:02Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 22:39 to 22:40; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T22:39:51Z",
       "end": "2026-05-06T22:40:08Z",
       "tractors": [
         "T2"
@@ -3885,8 +3859,8 @@
       ]
     },
     {
-      "start": "2026-05-06T22:45:47Z",
-      "end": "2026-05-06T22:46:03Z",
+      "start": "2026-05-06T22:39:51Z",
+      "end": "2026-05-06T22:40:02Z",
       "tractors": [
         "T3"
       ],
@@ -3894,7 +3868,7 @@
       "action": "CONTINUE_FALSE_ALARM",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T3 from 22:45 to 22:46; the MULTIPATH test passed."
+        "Bad minutes on T3 from 22:39 to 22:40; the MULTIPATH test passed."
       ]
     },
     {
@@ -3908,6 +3882,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T2 from 22:45 to 22:46; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T22:45:47Z",
+      "end": "2026-05-06T22:46:03Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 22:45 to 22:46; the MULTIPATH test passed."
       ]
     },
     {
@@ -3938,19 +3925,6 @@
     },
     {
       "start": "2026-05-06T22:57:38Z",
-      "end": "2026-05-06T22:57:55Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 22:57 to 22:57; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T22:57:38Z",
       "end": "2026-05-06T22:57:48Z",
       "tractors": [
         "T1"
@@ -3960,6 +3934,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 22:57 to 22:57; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T22:57:38Z",
+      "end": "2026-05-06T22:57:55Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 22:57 to 22:57; the MULTIPATH test passed."
       ]
     },
     {
@@ -3977,19 +3964,6 @@
     },
     {
       "start": "2026-05-06T23:03:33Z",
-      "end": "2026-05-06T23:03:49Z",
-      "tractors": [
-        "T3"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T3 from 23:03 to 23:03; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T23:03:33Z",
       "end": "2026-05-06T23:03:50Z",
       "tractors": [
         "T1"
@@ -3999,6 +3973,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 23:03 to 23:03; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T23:03:33Z",
+      "end": "2026-05-06T23:03:49Z",
+      "tractors": [
+        "T3"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T3 from 23:03 to 23:03; the MULTIPATH test passed."
       ]
     },
     {
@@ -4133,19 +4120,6 @@
     },
     {
       "start": "2026-05-06T23:33:11Z",
-      "end": "2026-05-06T23:33:28Z",
-      "tractors": [
-        "T2"
-      ],
-      "class": "MULTIPATH",
-      "action": "CONTINUE_FALSE_ALARM",
-      "confidence": 0.5,
-      "evidence": [
-        "Bad minutes on T2 from 23:33 to 23:33; the MULTIPATH test passed."
-      ]
-    },
-    {
-      "start": "2026-05-06T23:33:11Z",
       "end": "2026-05-06T23:33:23Z",
       "tractors": [
         "T1"
@@ -4155,6 +4129,19 @@
       "confidence": 0.5,
       "evidence": [
         "Bad minutes on T1 from 23:33 to 23:33; the MULTIPATH test passed."
+      ]
+    },
+    {
+      "start": "2026-05-06T23:33:11Z",
+      "end": "2026-05-06T23:33:28Z",
+      "tractors": [
+        "T2"
+      ],
+      "class": "MULTIPATH",
+      "action": "CONTINUE_FALSE_ALARM",
+      "confidence": 0.5,
+      "evidence": [
+        "Bad minutes on T2 from 23:33 to 23:33; the MULTIPATH test passed."
       ]
     },
     {

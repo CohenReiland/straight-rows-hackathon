@@ -46,17 +46,17 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
         shared_by.append(tractor if cause in config.ONE_TRACTOR_CAUSES else "fleet")
     tested["shared_by"] = shared_by
 
-    # Same-cause candidates in an event only join if they overlap each other
+    # Same-cause candidates join if they overlap, even from different events, so
+    # one cause found two ways is reported once
     tested["part"] = 0
-    for _, same_cause in tested.groupby(["event", "cause", "shared_by"]):
+    for _, same_cause in tested.groupby(["cause", "shared_by"]):
         parts = s5_group.overlap_numbers(same_cause["start"], same_cause["end"])
         tested.loc[same_cause.index, "part"] = parts
 
-    # Make one detection per event, cause, tractor share, and part
+    # Make one detection per cause, tractor share, and part
     detections = []
-    events = []
-    groups = tested.groupby(["event", "cause", "shared_by", "part"])
-    for (event, cause, _, _), same_cause in groups:
+    groups = tested.groupby(["cause", "shared_by", "part"])
+    for (cause, _, _), same_cause in groups:
         start = same_cause["start"].min()
         end = same_cause["end"].max()
         tractors = sorted(same_cause["tractor"].unique())
@@ -82,7 +82,6 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
                 "evidence": lines,
             }
         )
-        events.append(event)
 
     # Sort by start time, then cause
     detections.sort(key=lambda detection: (detection["start"], detection["class"]))
