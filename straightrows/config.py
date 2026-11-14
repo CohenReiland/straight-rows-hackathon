@@ -118,6 +118,8 @@ BAD_WEAKEST_DROP_DB = 13.0
 BAD_CROSS_TRACK_ERROR_M = 0.50
 # Stretch an episode while the average signal is still this far below normal. learned
 WEAK_MEAN_DROP_DB = 3.0
+# Stretch an episode at most this many minutes at each end. fixed
+MAX_STRETCH_MIN = 30
 # Bad minutes this close together join into one episode. learned
 MAX_GAP_MIN = 3
 # A dip is the weakest satellite this far under its normal for the moment. fixed

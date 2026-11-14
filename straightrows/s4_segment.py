@@ -22,7 +22,7 @@ def is_signal_bad(minutes: pd.DataFrame) -> pd.Series:
 
 
 # True for working minutes that are still partially off the normal, used to stretch
-# episodes. Not called yet: stretching waits for step 7.
+# episodes.
 def is_signal_weak(minutes: pd.DataFrame) -> pd.Series:
     return minutes["working"] & (
         (minutes["signal_mean_drop_db"] >= config.WEAK_MEAN_DROP_DB)
@@ -76,6 +76,74 @@ def find_runs(
     table = pd.DataFrame(candidates, columns=["tractor", "start", "end"])
     table["kind"] = kind
     return table
+
+
+# Move each episode's start back and end forward while the minutes next to it are
+# weak. An episode never stretches into its neighbor on the same tractor.
+def stretch_runs(
+    runs: pd.DataFrame,
+    weak_minutes: pd.DataFrame,
+    window_start: pd.Timestamp,
+    window_end: pd.Timestamp,
+) -> pd.DataFrame:
+    # Set up the time steps
+    one_minute = pd.Timedelta(minutes=1)
+    max_stretch = pd.Timedelta(minutes=config.MAX_STRETCH_MIN)
+
+    # Get the weak minutes of each tractor
+    weak = set(zip(weak_minutes["tractor_id"], weak_minutes["minute"]))
+
+    # Work on a copy, sorted so neighbors are next to each other
+    runs = runs.sort_values(["tractor", "start"]).reset_index(drop=True)
+    starts = list(runs["start"])
+    ends = list(runs["end"])
+
+    # Check one episode at a time
+    for i in range(len(runs)):
+        tractor = runs.at[i, "tractor"]
+
+        # Get the limits: the window, the stretch cap, and the neighbors
+        earliest = max(window_start, starts[i] - max_stretch)
+        latest = min(window_end, ends[i] + max_stretch)
+        if i > 0 and runs.at[i - 1, "tractor"] == tractor:
+            earliest = max(earliest, ends[i - 1])
+        if i + 1 < len(runs) and runs.at[i + 1, "tractor"] == tractor:
+            latest = min(latest, starts[i + 1])
+
+        # Step the start back while the minute before it is weak
+        while (
+            starts[i] - one_minute >= earliest
+            and (tractor, starts[i] - one_minute) in weak
+        ):
+            starts[i] -= one_minute
+
+        # Step the end forward while the minute at the end is weak
+        while ends[i] + one_minute <= latest and (tractor, ends[i]) in weak:
+            ends[i] += one_minute
+
+    # Save the new edges
+    runs["start"] = starts
+    runs["end"] = ends
+
+    # Stretched episodes can now meet their neighbors, so join those
+    return join_touching(runs)
+
+
+# Join episodes on the same tractor where one ends right as the next starts.
+def join_touching(runs: pd.DataFrame) -> pd.DataFrame:
+    joined = []
+    for run in runs.to_dict("records"):
+        # Get the last saved episode
+        last = joined[-1] if joined else None
+
+        # Extend it if this one touches it, otherwise save this one
+        same_tractor = last is not None and last["tractor"] == run["tractor"]
+        if same_tractor and run["start"] <= last["end"]:
+            last["end"] = max(last["end"], run["end"])
+        else:
+            joined.append(run)
+
+    return pd.DataFrame(joined, columns=runs.columns)
 
 
 # Find short dips of the weakest satellite in the 1-second data, for multipath.
@@ -163,7 +231,7 @@ def find_drifts(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
     return table
 
 
-# Find the average drop jumping up on top of an episode already going on. 
+# Find the average drop jumping up on top of an episode already going on.
 # Each step is its own candidate.
 def find_steps(minutes: pd.DataFrame, window: str) -> pd.DataFrame:
     # Set up the window and the lookback
@@ -225,6 +293,10 @@ def find_candidates(
     # Find the link and signal episodes separately
     link = find_runs(in_window[is_link_bad(in_window)], window_end, "link")
     signal = find_runs(in_window[is_signal_bad(in_window)], window_end, "signal")
+
+    # Stretch the signal episodes while the signal is still partly low
+    weak = in_window[is_signal_weak(in_window)]
+    signal = stretch_runs(signal, weak, window_start, window_end)
 
     # Find the short dips for multipath and the smooth drifts for spoofing
     dips = find_dips(telemetry, window)
