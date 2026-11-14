@@ -134,6 +134,12 @@ DRIFT_MEDIAN_M = 1.0
 DRIFT_SPREAD_M = 0.3
 # Drifting blocks this many blocks apart or closer join into one drift. fixed
 DRIFT_MAX_GAP_BLOCKS = 1
+# Minutes before each minute used for its own level (median average drop). fixed
+STEP_LOOKBACK_MIN = 30
+# A step is the average drop rising this far above that level. fixed
+STEP_RISE_DB = 5.0
+# Shortest step kept, in minutes. fixed
+MIN_STEP_MIN = 10
 
 # Cause test settings
 # Look this far before an episode for signal flicker (S4) readings. fixed

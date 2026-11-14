@@ -151,6 +151,54 @@ def find_drifts(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
     return table
 
 
+# Find the average drop jumping up on top of an episode already going on. 
+# Each step is its own candidate.
+def find_steps(minutes: pd.DataFrame, window: str) -> pd.DataFrame:
+    # Set up the window and the lookback
+    window_start, window_end = config.WINDOWS[window]
+    lookback = pd.Timedelta(minutes=config.STEP_LOOKBACK_MIN)
+    shortest = pd.Timedelta(minutes=config.MIN_STEP_MIN)
+
+    # Check one tractor at a time
+    steps = []
+    for tractor, rows in minutes.groupby("tractor_id"):
+        rows = rows.set_index("minute").sort_index()
+        drop = rows["signal_mean_drop_db"].where(rows["working"])
+
+        # Each minute's level = median drop over the minutes before it, and the
+        # lowest drop there, so a step only sits on an episode that filled them all
+        before = drop.rolling(
+            lookback, closed="left", min_periods=config.STEP_LOOKBACK_MIN // 2
+        )
+        level = before.median()
+        lowest = before.min()
+
+        # Walk the minutes. A step starts when the drop jumps well above a level
+        # that was bad the whole lookback, and ends when it falls back near it
+        runs = []
+        start = None
+        for minute, value in drop.items():
+            if start is None:
+                already_bad = lowest[minute] >= config.HEALTHY_MAX_DROP_DB
+                if already_bad and value - level[minute] >= config.STEP_RISE_DB:
+                    start, base = minute, level[minute]
+            elif pd.isna(value) or value - base < config.STEP_RISE_DB:
+                runs.append((start, minute))
+                start = None
+        if start is not None:
+            runs.append((start, drop.index[-1] + pd.Timedelta(minutes=1)))
+
+        # Keep the long enough steps that start in the window
+        for start, end in runs:
+            if end - start >= shortest and window_start <= start < window_end:
+                steps.append({"tractor": tractor, "start": start, "end": end})
+
+    # Make the table and label the kind
+    table = pd.DataFrame(steps, columns=["tractor", "start", "end"])
+    table["kind"] = "step"
+    return table
+
+
 # Find every candidate: link and signal episodes from the minutes, dips from the
 # seconds.
 def find_candidates(
