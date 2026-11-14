@@ -49,6 +49,67 @@ def tractor_iou(a: dict, b: dict) -> float:
 def pair_overlap(detection: dict, label: dict) -> tuple[float, float] | None:
     time_overlap = time_iou(detection, label)
     tractor_overlap = tractor_iou(detection, label)
-    if time_overlap >= config.MATCH_TIME_IOU and tractor_overlap >= config.MATCH_TRACTOR_IOU:
+    if (
+        time_overlap >= config.MATCH_TIME_IOU
+        and tractor_overlap >= config.MATCH_TRACTOR_IOU
+    ):
         return time_overlap, tractor_overlap
     return None
+
+
+# The best one-to-one pairs between some detections and some labels,
+# the most pairs, then the most time overlap, then the most tractor overlap.
+def best_pairs(
+    detections: list[dict],
+    labels: list[dict],
+    d_indexes: list[int],
+    l_indexes: list[int],
+    same_cause_only: bool,
+) -> dict[int, int]:
+    # For each set of used labels, the best pairing so far: ((time, tractor), pairs)
+    best = {frozenset(): ((0.0, 0.0), ())}
+
+    # Add the detections one at a time
+    for d_index in sorted(d_indexes):
+        # Labels this detection could pair with
+        options = []
+        for l_index in sorted(l_indexes):
+            if (
+                same_cause_only
+                and detections[d_index]["class"] != labels[l_index]["class"]
+            ):
+                continue
+            overlap = pair_overlap(detections[d_index], labels[l_index])
+            if overlap is not None:
+                options.append((l_index, overlap))
+
+        # Try adding this detection to every pairing so far
+        updated = dict(best)
+        for used, (weight, pairs) in best.items():
+            for l_index, overlap in options:
+                # Each label pairs only once
+                if l_index in used:
+                    continue
+
+                # Keep the new pairing if it beats the old one for the same labels
+                new_used = used | {l_index}
+                new_weight = (weight[0] + overlap[0], weight[1] + overlap[1])
+                new_pairs = pairs + ((l_index, d_index),)
+                old = updated.get(new_used)
+                if old is None or new_weight > old[0]:
+                    updated[new_used] = (new_weight, new_pairs)
+                elif new_weight == old[0] and new_pairs < old[1]:
+                    updated[new_used] = (new_weight, new_pairs)
+        best = updated
+
+    # Most pairs, then most time overlap, then most tractor overlap, then earliest pairs
+    winner = min(
+        best,
+        key=lambda used: (
+            -len(used),
+            -best[used][0][0],
+            -best[used][0][1],
+            best[used][1],
+        ),
+    )
+    return dict(best[winner][1])
