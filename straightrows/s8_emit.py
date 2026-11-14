@@ -56,11 +56,20 @@ def summarize(detections: list[dict]) -> None:
     cause_counts = Counter(detection["class"] for detection in detections)
     print(f"{len(detections)} detections: {dict(cause_counts)}")
 
-    # Print one line per detection
+    # Print one line per detection, except multipath
+    multipath = []
     for detection in detections:
+        if detection["class"] == "MULTIPATH":
+            multipath.append(detection)
+            continue
         tractors = ",".join(detection["tractors"])
         times = f"{detection['start']} to {detection['end'][11:]}"
         print(f"  {times}  {tractors:8} {detection['class']}")
+
+    # Print one line for all the multipath reports
+    if multipath:
+        first, last = multipath[0]["start"], multipath[-1]["start"]
+        print(f"  {len(multipath)} MULTIPATH reports, from {first} to {last}")
 
 
 # Save each tractor's normal values and the cutoffs that came from them.

@@ -28,7 +28,8 @@ def main() -> None:
     minutes = s3_features.minute_features(telemetry, s1_load.load_labels())
 
     # Find: get the episodes and group them into events
-    candidates = s5_group.group_events(s4_segment.find_candidates(minutes, window))
+    candidates = s4_segment.find_candidates(minutes, telemetry, window)
+    candidates = s5_group.group_events(candidates)
 
     # Explain: test the causes, pick one, and write the evidence
     tested = s6_attribute.test_candidates(candidates, minutes, telemetry, space_feeds)
