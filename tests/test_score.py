@@ -67,7 +67,9 @@ def test_short_multipath_is_free():
     short = score(detections + [item("MULTIPATH", 18, 18 + 2 / 60)], LABELS)
     long = score(detections + [item("MULTIPATH", 18, 18 + 4 / 60)], LABELS)
     assert round(short["total"], 2) == 40.00
+    assert short["free_multipath"] == 1
     assert round(long["total"], 2) == 38.33
+    assert long["free_multipath"] == 0
 
 
 # Starting 20 minutes late still matches but earns only part of the onset credit.

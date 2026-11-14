@@ -216,6 +216,7 @@ def score(detections: list[dict], labels: list[dict]) -> dict:
 
     # Check each detection
     false_alarms = []
+    free_multipath = 0
     for d_index, detection in enumerate(detections):
         # Skip hits
         is_hit = (
@@ -227,6 +228,7 @@ def score(detections: list[dict], labels: list[dict]) -> dict:
 
         # Skip exempt reports
         if d_index not in label_for and is_exempt(detection, labels):
+            free_multipath += 1
             continue
 
         # Everything else is a false alarm
@@ -254,6 +256,7 @@ def score(detections: list[dict], labels: list[dict]) -> dict:
         "counts": counts,
         "outcomes": outcomes,
         "false_alarms": false_alarms,
+        "free_multipath": free_multipath,
         "actions_agreed": actions_agreed,
     }
 
@@ -295,14 +298,26 @@ def report(path: Path) -> dict:
             print(f"  {name} wrong cause ({detection['class']})")
         else:
             error_min = (detection["start"] - label["start"]).total_seconds() / 60
-            print(f"  {name} hit, onset {error_min:+.0f} min, credit {credit:.2f}")
+            print(f"  {name} hit, onset {error_min:+.1f} min, credit {credit:.2f}")
 
-    # Print the false alarms
+    # Labels that a wrong-cause detection was paired with, by detection
+    wrong_for = {
+        id(detection): label["id"]
+        for label, detection, _ in result["outcomes"]
+        if detection is not None and detection["class"] != label["class"]
+    }
+
+    # Print the false alarms, marking the ones that were a wrong cause
     print(f"False alarms ({len(result['false_alarms'])}):")
     for detection in result["false_alarms"]:
+        wrong = wrong_for.get(id(detection))
+        note = f"  (wrong cause for {wrong})" if wrong else ""
         print(
             f"  {short_time(detection['start'])} to {detection['end']:%H:%M}  "
-            f"{','.join(detection['tractors']):8} {detection['class']}"
+            f"{','.join(detection['tractors']):8} {detection['class']}{note}"
         )
+
+    # Print how many short multipath reports were let off
+    print(f"Free multipath reports: {result['free_multipath']}")
 
     return result
