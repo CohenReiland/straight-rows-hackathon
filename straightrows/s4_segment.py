@@ -199,8 +199,8 @@ def find_steps(minutes: pd.DataFrame, window: str) -> pd.DataFrame:
     return table
 
 
-# Find every candidate: link and signal episodes from the minutes, dips from the
-# seconds.
+# Find every candidate: link and signal episodes and steps from the minutes, dips
+# and drifts from the seconds.
 def find_candidates(
     minutes: pd.DataFrame, telemetry: pd.DataFrame, window: str
 ) -> pd.DataFrame:
@@ -214,8 +214,13 @@ def find_candidates(
     link = find_runs(in_window[is_link_bad(in_window)], window_end, "link")
     signal = find_runs(in_window[is_signal_bad(in_window)], window_end, "signal")
 
-    # Find the short dips for multipath
+    # Find the short dips for multipath and the smooth drifts for spoofing
     dips = find_dips(telemetry, window)
+    drifts = find_drifts(telemetry, window)
 
-    # Put them in one table
-    return pd.concat([link, signal, dips], ignore_index=True)
+    # Find steps from all minutes, so the lookback can reach before the window
+    steps = find_steps(minutes, window)
+
+    # Put the non-empty ones in one table
+    tables = [link, signal, steps, dips, drifts]
+    return pd.concat([table for table in tables if not table.empty], ignore_index=True)
