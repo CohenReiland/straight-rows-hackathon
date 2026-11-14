@@ -256,3 +256,53 @@ def score(detections: list[dict], labels: list[dict]) -> dict:
         "false_alarms": false_alarms,
         "actions_agreed": actions_agreed,
     }
+
+
+# Format a time as day and clock.
+def short_time(time: pd.Timestamp) -> str:
+    return time.strftime("%m-%d %H:%M")
+
+
+# Score a file against the dev labels and print a report.
+def report(path: Path) -> dict:
+    # Grade the file
+    detections = read_items(path, "detections")
+    result = score(detections, read_items(config.LABELS, "episodes"))
+
+    # Print the total score
+    print(
+        f"\nDev score {result['total']:.1f} / 40  "
+        f"(macro-F1 {result['macro_f1']:.2f} = {25 * result['macro_f1']:.1f}, "
+        f"onset {result['mean_onset']:.2f} = {15 * result['mean_onset']:.1f})"
+    )
+
+    # Print how many hits had the label's action
+    print(f"  actions agreed: {result['actions_agreed']} of {len(result['outcomes'])}")
+
+    # Print one line per cause
+    print(f"  {'cause':16} hits  false  missed   F1")
+    for cause, c in result["counts"].items():
+        counts = f"{c['hits']:4}  {c['false']:5}  {c['missed']:6}"
+        print(f"  {cause:16} {counts}  {c['f1']:.2f}")
+
+    # Print what happened to each label
+    print("Labels:")
+    for label, detection, credit in result["outcomes"]:
+        name = f"{label['id']} {label['class']:15} {','.join(label['tractors']):8}"
+        if detection is None:
+            print(f"  {name} missed")
+        elif detection["class"] != label["class"]:
+            print(f"  {name} wrong cause ({detection['class']})")
+        else:
+            error_min = (detection["start"] - label["start"]).total_seconds() / 60
+            print(f"  {name} hit, onset {error_min:+.0f} min, credit {credit:.2f}")
+
+    # Print the false alarms
+    print(f"False alarms ({len(result['false_alarms'])}):")
+    for detection in result["false_alarms"]:
+        print(
+            f"  {short_time(detection['start'])} to {detection['end']:%H:%M}  "
+            f"{','.join(detection['tractors']):8} {detection['class']}"
+        )
+
+    return result
