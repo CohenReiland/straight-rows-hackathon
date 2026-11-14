@@ -66,3 +66,8 @@ def load_feed(feed: str) -> pd.DataFrame:
 
     # Sort by the first time column
     return table.sort_values(time_columns[0]).reset_index(drop=True)
+
+
+# Read each space feed into its own table, keyed by our feed name.
+def load_space_feeds() -> dict[str, pd.DataFrame]:
+    return {feed: load_feed(feed) for feed in config.SPACE_FEED_FILES}
