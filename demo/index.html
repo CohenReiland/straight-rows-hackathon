@@ -4,88 +4,253 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Straight Rows</title>
+    <!-- Display fonts when online; style.css falls back to system fonts offline -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@400;600&display=swap"
+    />
     <link rel="stylesheet" href="style.css" />
     <script src="plotly.min.js"></script>
     <script src="app.js" defer></script>
   </head>
   <body>
-    <nav class="sidebar">
-      <div class="brand">Straight Rows</div>
-      <ol>
-        <li><a href="#problem">The problem</a></li>
-        <li><a href="#data">The data</a></li>
-        <li><a href="#how">How it works</a></li>
-        <li><a href="#dev">Dev check</a></li>
-        <li><a href="#eval">Eval results</a></li>
-        <li><a href="#deep">Deep dive</a></li>
-        <li><a href="#limits">Limits</a></li>
-      </ol>
-      <button id="reload" type="button">Reload</button>
-      <div id="status" class="status">Loading…</div>
-    </nav>
+    <div class="page">
+      <nav class="rail" aria-label="Sections">
+        <a class="logo" href="#problem" aria-label="Straight Rows, back to top">
+          <svg width="28" height="28" viewBox="0 0 30 30" fill="none" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 8h24M3 15h24" stroke-width="2.2" stroke="#b3b6ba"></path>
+            <path d="M3 22h9c3 0 4-3 7-3s3 3 8 3" stroke="#0066cc" stroke-width="2.6"></path>
+          </svg>
+          <span class="tip">Straight Rows</span>
+        </a>
+        <a class="num" href="#problem">1<span class="tip">The problem</span></a>
+        <a class="num" href="#data">2<span class="tip">The data</span></a>
+        <a class="num" href="#how">3<span class="tip">Rules</span></a>
+        <a class="num" href="#dev">4<span class="tip">Dev check</span></a>
+        <a class="num" href="#eval">5<span class="tip">Eval results</span></a>
+        <a class="num" href="#deep">6<span class="tip">Deep dive</span></a>
+        <a class="num" href="#limits">7<span class="tip">Limits</span></a>
+        <span class="spacer"></span>
+        <button id="reload" type="button" aria-label="Reload data">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1b1e22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 12a8 8 0 1 1-2.3-5.6"></path>
+            <path d="M20 4v5h-5"></path>
+          </svg>
+          <span class="tip">Reload data</span>
+        </button>
+        <div id="status" class="status">Loading…</div>
+      </nav>
 
-    <main>
-      <section id="problem">
-        <h1>Is it the Sun, an adversary, or my own hardware?</h1>
-        <p class="placeholder">Coming next: the 5 causes and the action for each.</p>
-      </section>
+      <main>
+        <div class="wrap">
+          <!-- 1 · The problem -->
+          <section id="problem">
+            <h1>Is it the Sun, an adversary, or my own hardware?</h1>
+            <p class="lead">
+              Three tractors steer by GNSS, and each cause of bad guidance needs a different action.
+            </p>
+            <div id="causes" class="cause-list"></div>
+          </section>
 
-      <section id="data">
-        <h2>2 · The data at a glance</h2>
-        <p>
-          72 hours of telemetry, one point per tractor per minute, with the space feeds below.
-          Colored bands are the training labels. Gray is parked time. Drag to zoom: the dev chart
-          follows. Double-click to zoom back out.
-        </p>
-        <div class="legend" id="data-legend"></div>
-        <div id="data-chart" class="chart tall"></div>
-      </section>
+          <!-- 2 · The data -->
+          <section id="data">
+            <h2><span class="n">2</span>The data at a glance</h2>
+            <p class="lead">
+              This is 72 hours of telemetry from the three tractors, lined up with the space-weather
+              feeds on one time axis. Drag to zoom, double-click to zoom back out.
+            </p>
+            <div class="chart-tools">
+              <span>One point per tractor per minute. Training labels are colored bands.</span>
+              <label class="toggle">
+                <input type="checkbox" id="debug-rows" />
+                <span>Show debug rows</span>
+              </label>
+            </div>
+            <div id="data-chart" class="chart"></div>
+            <div id="data-legend" class="legend"></div>
+          </section>
 
-      <section id="how">
-        <h2>3 · How it works</h2>
-        <p class="placeholder">Coming next: the 8 stages and the learned thresholds.</p>
-      </section>
+          <!-- 3 · Rules -->
+          <section id="how">
+            <h2><span class="n">3</span>Rules</h2>
+            <p class="lead">
+              Eight small stages turn raw telemetry into a cause, an action, and the evidence for
+              each episode.
+            </p>
+            <div id="stages" class="stages"></div>
+            <h3>The five cause tests</h3>
+            <div id="tests" class="table-box"></div>
+            <h3>Learned thresholds</h3>
+            <p style="margin: 0 0 var(--space-md); color: var(--ink-2); max-width: 70ch">
+              Each tractor's normal comes from its own working minutes. A minute is bad when its
+              weakest satellite falls far enough below that normal.
+            </p>
+            <div id="thresholds" class="table-box"></div>
+          </section>
 
-      <section id="dev">
-        <h2>4 · Dev check: the labels vs. my detections</h2>
-        <p>
-          For each tractor, the training labels are on top, my detections are underneath, and the
-          short multipath reports (not scored) get their own thin lane. Hatched means a false alarm
-          or a miss.
-        </p>
-        <div class="legend" id="dev-legend"></div>
-        <div id="dev-chart" class="chart"></div>
-        <div class="score-row">
-          <div id="scorecard"></div>
-          <aside class="callout">
-            <strong>Did it overfit?</strong> The cutoffs are set from each tractor's own normal,
-            not hardcoded per episode, and the eval window was never used for tuning. A perfect
-            dev score is still a warning: see the limits section.
-          </aside>
+          <!-- 4 · Dev check -->
+          <section id="dev">
+            <h2><span class="n">4</span>Dev check</h2>
+            <p class="lead">
+              These are the labeled examples from the two dev days, with my detections right under
+              them.
+            </p>
+            <div id="dev-chart" class="chart"></div>
+            <div id="dev-legend" class="legend"></div>
+            <div id="figures" class="figures"></div>
+            <div id="cause-score" class="table-box"></div>
+            <p class="overfit">
+              <strong>Did it overfit?</strong> The cutoffs come from each tractor's own normal, not
+              hardcoded per episode, and the eval window was never used to tune a number. A perfect
+              dev score is still a warning: see the limits section.
+            </p>
+            <h3>Each label</h3>
+            <div id="label-table" class="table-box"></div>
+          </section>
+
+          <!-- 5 · Eval results -->
+          <section id="eval">
+            <h2><span class="n">5</span>Eval results</h2>
+            <p class="lead">
+              Pick a day and an episode to see the call, its confidence, and the evidence behind it.
+            </p>
+            <div class="day-bar">
+              <div id="days" role="group" aria-label="Day" style="display: flex; gap: var(--space-xs); flex-wrap: wrap"></div>
+              <span class="gap"></span>
+              <label class="toggle">
+                <input type="checkbox" id="show-multipath" />
+                <span id="multipath-label">Show multipath</span>
+              </label>
+            </div>
+            <div class="field">
+              <div id="field" class="field-inner"></div>
+            </div>
+            <div class="episodes">
+              <div id="ep-list" class="ep-list"></div>
+              <article id="detail" class="detail"></article>
+            </div>
+          </section>
+
+          <!-- 6 · Deep dive -->
+          <section id="deep" style="border-top: 0">
+            <h2><span class="n">6</span>Deep dive</h2>
+            <p class="lead">
+              Two windows from the eval day, zoomed to 10-second steps: one clear call and one
+              ambiguous one.
+            </p>
+            <div class="dive">
+              <div class="dive-head" style="border-color: var(--jam)">
+                <h3>The clear call: jamming at 02:12</h3>
+                <p>
+                  All three tractors lose their signal within the same minute while signal flicker
+                  stays flat, and an interference report arrives from 1.8 km away in the middle of
+                  it.
+                </p>
+              </div>
+              <div id="dive-clear" class="chart"></div>
+              <div id="dive-clear-calls" class="dive-calls"></div>
+            </div>
+            <div class="dive">
+              <div class="dive-head" style="border-color: var(--eq)">
+                <h3>The ambiguous one: 18:00 to 20:30</h3>
+                <p>
+                  Jamming hits all three tractors with no interference report, so its confidence
+                  stops at 0.85. The drop follows position: T3, furthest west, loses about 14 dB and
+                  T2, furthest east, about 6 dB. 48 minutes later T2 alone loses its correction link:
+                  a different cause and a different action on the same tractor.
+                </p>
+              </div>
+              <div id="dive-ambiguous" class="chart"></div>
+              <div id="dive-ambiguous-calls" class="dive-calls"></div>
+            </div>
+            <div class="legend" style="margin-top: var(--space-lg)">
+              <span><span class="swatch" style="height: 3px; width: 18px; background: var(--ink)"></span>T1</span>
+              <span><span class="swatch" style="height: 3px; width: 18px; background: var(--accent)"></span>T2</span>
+              <span><span class="swatch" style="height: 3px; width: 18px; background: var(--quiet)"></span>T3</span>
+              <span>Weakest satellite signal (dB-Hz) and distance off the row (m), worst value per 10 s</span>
+            </div>
+          </section>
+
+          <!-- 7 · Limits -->
+          <section id="limits">
+            <h2><span class="n">7</span>Limits and ways to improve</h2>
+            <p class="lead">These are the cases the rules get wrong and the data that would fix them.</p>
+            <div class="columns">
+              <div>
+                <h3>Where it gets it wrong</h3>
+                <h4>Multipath</h4>
+                <ul>
+                  <li>
+                    Every short dip is reported as multipath: 305 on eval, most at the row ends with
+                    all three tractors dipping together.
+                  </li>
+                  <li>
+                    Without per-satellite data we can't tell row-end shading from true multipath.
+                  </li>
+                  <li>
+                    The row-end dips forced the bad-minute cutoff up to 13 dB, so a long but shallow
+                    episode could slip under it.
+                  </li>
+                </ul>
+                <h4>Overfitting</h4>
+                <ul>
+                  <li>Dev scores 40/40 on only 12 labels.</li>
+                  <li>
+                    The cutoffs come from each tractor's own normal and from calm dev minutes, never
+                    from eval.
+                  </li>
+                  <li>
+                    Every eval call matches a pattern dev already had, so a truly new kind of event
+                    would probably be missed or mislabeled.
+                  </li>
+                </ul>
+                <h4>Two causes at once</h4>
+                <ul>
+                  <li>A jam during a storm is only found as a further step down on every tractor.</li>
+                  <li>Overlapping calls lose 0.15 confidence each.</li>
+                  <li>When several tests pass, the first in a fixed order wins.</li>
+                  <li>
+                    Not every combination of two or three causes has been handled or tested: the
+                    labels only show a few of them.
+                  </li>
+                </ul>
+                <h4>Other</h4>
+                <ul>
+                  <li>Jammer on one tractor → equipment fault</li>
+                  <li>Base-station outage → three equipment faults</li>
+                  <li>Signal fault during a storm → space weather</li>
+                  <li>No interference report → jamming confidence stops at 0.85</li>
+                  <li>A storm without a magnetic field drop scores lower (eval storm: 0.84)</li>
+                </ul>
+              </div>
+              <div>
+                <h3>Ways to improve</h3>
+                <ul>
+                  <li><strong>AGC and noise floor</strong>: tells jamming from an antenna fault</li>
+                  <li>
+                    <strong>Per-satellite signal with satellite IDs</strong>: tells row-end shading
+                    from multipath
+                  </li>
+                  <li><strong>Wheel odometry or an IMU</strong>: a cross-check against spoofing</li>
+                  <li><strong>Base-station logs</strong>: confirms correction-link faults</li>
+                  <li>
+                    <strong>More labeled examples</strong> of multipath and of overlapping causes
+                  </li>
+                  <li>
+                    <strong>A jammer footprint sign</strong>: the drop grows toward one side of the
+                    fleet, as at 18:30 on the eval day
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p class="footer">
+              Straight Rows, built for the Bluestaq × NDSU hackathon. Code on GitHub at
+              <a href="https://github.com/CohenReiland/straight-rows-hackathon">CohenReiland/straight-rows-hackathon</a>
+            </p>
+          </section>
         </div>
-        <h3>Each label</h3>
-        <div id="label-table"></div>
-        <h3>Confusion table</h3>
-        <div id="confusion"></div>
-      </section>
-
-      <section id="eval">
-        <h2>5 · Eval results</h2>
-        <p class="placeholder">Coming next: my eval detections, each with an action and confidence.</p>
-      </section>
-
-      <section id="deep">
-        <h2>6 · Deep dive</h2>
-        <p class="placeholder">
-          Coming next: one clear episode and one ambiguous one, zoomed to per-second data, with
-          their evidence and why each got its confidence.
-        </p>
-      </section>
-
-      <section id="limits">
-        <h2>7 · Limits and next data</h2>
-        <p class="placeholder">Coming next: known failure modes and the data that would help most.</p>
-      </section>
-    </main>
+      </main>
+    </div>
   </body>
 </html>

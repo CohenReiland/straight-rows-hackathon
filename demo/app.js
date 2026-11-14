@@ -1,51 +1,71 @@
 // Fetches the JSON that demo/build.py wrote and draws every section.
 // The page only displays: every number here was computed in Python.
 
-const CAUSE_COLORS = {
-  SPACE_WEATHER: "#7c3aed",
-  JAMMING: "#dc2626",
-  SPOOFING: "#ea8c00",
-  EQUIPMENT_FAULT: "#2563eb",
-  MULTIPATH: "#059669",
+// Colors, the same as style.css (Plotly needs plain hex)
+const INK = "#1b1e22";
+const INK_2 = "#383c42";
+const MUTED = "#5b6067";
+const FAINT = "#878b91";
+const QUIET = "#b3b6ba";
+const RULE = "#e4e6e9";
+const PAPER = "#fcfcfd";
+const PAPER_2 = "#f3f4f6";
+const ACCENT = "#0066cc";
+
+// Each cause: its name, color, and the plain words for its action
+const CAUSES = {
+  SPACE_WEATHER: { label: "Space weather", color: "#5b2fc0", action: "Halt or switch to degraded mode" },
+  JAMMING: { label: "Jamming", color: "#b3261e", action: "Halt and report" },
+  SPOOFING: { label: "Spoofing", color: "#b0600f", action: "Halt, cross-check, and report" },
+  EQUIPMENT_FAULT: { label: "Equipment fault", color: "#0a5640", action: "Service this machine, the others keep going" },
+  MULTIPATH: { label: "Multipath", color: "#5f5e68", action: "Keep going, it's a false alarm" },
 };
+const ORDER = Object.keys(CAUSES);
 
-const CAUSE_NAMES = {
-  SPACE_WEATHER: "Space weather",
-  JAMMING: "Jamming",
-  SPOOFING: "Spoofing",
-  EQUIPMENT_FAULT: "Equipment fault",
-  MULTIPATH: "Multipath",
-};
+// Tractor line colors in the deep dive
+const TRACTOR_COLORS = { T1: INK, T2: ACCENT, T3: QUIET };
 
-const TRACTOR_COLORS = { T1: "#111827", T2: "#0891b2", T3: "#db2777" };
+// The 8 stages, grouped like run.py
+const STAGES = [
+  ["Prepare", [
+    ["1", "Load", "telemetry and the five space feeds"],
+    ["2", "Mask", "keep working minutes, drop parked time"],
+    ["3", "Features", "each minute vs. its own normal and the fleet"],
+  ]],
+  ["Find", [
+    ["4", "Segment", "bad minutes, dips, drifts and steps into episodes"],
+    ["5", "Group", "overlapping episodes share one event"],
+  ]],
+  ["Explain", [
+    ["6", "Attribute", "run the five cause tests"],
+    ["7", "Decide", "pick a cause, score confidence, write evidence"],
+    ["8", "Emit", "write submission.json and validate it"],
+  ]],
+];
 
-const STATUS_NAMES = {
-  hit: "hit",
-  missed: "missed",
-  wrong_cause: "wrong cause",
-  false_alarm: "false alarm",
-  exempt: "short multipath (not scored)",
-};
-
-const CHART_IDS = ["data-chart", "dev-chart"];
-const FONT = { family: "Segoe UI, system-ui, sans-serif", size: 16, color: "#111827" };
+const FONT = { family: "Segoe UI, system-ui, sans-serif", size: 14, color: INK_2 };
 const PLOT_CONFIG = {
   responsive: true,
   displaylogo: false,
-  modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"],
+  displayModeBar: "hover",
+  modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d", "toggleSpikelines"],
 };
+const LINKED = ["data-chart", "dev-chart"];
 
 let data = {};
 let syncing = false;
+const view = { day: null, picked: null, showMultipath: false, debugRows: false };
+
+// ---------- Small helpers ----------
 
 // "2026-05-04T01:20:00Z" -> "2026-05-04 01:20:00", so Plotly shows UTC as is
 function t(text) {
   return text.replace("T", " ").replace("Z", "");
 }
 
-// "2026-05-04T01:20:00Z" -> "05-04 01:20"
-function clock(text) {
-  return text.slice(5, 16).replace("T", " ");
+// "2026-05-04T01:20:00Z" -> "01:20"
+function hhmm(text) {
+  return text.slice(11, 16);
 }
 
 function minutesBetween(start, end) {
@@ -58,6 +78,11 @@ function lengthText(start, end) {
   return minutes < 3 ? `${Math.round(minutes * 60)} s` : `${Math.round(minutes)} min`;
 }
 
+// "2026-05-06..." -> "May 6"
+function dayName(text) {
+  return `May ${Number(text.slice(8, 10))}`;
+}
+
 function el(id) {
   return document.getElementById(id);
 }
@@ -66,9 +91,13 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 }
 
+function tractors() {
+  return Object.keys(data.minutes).sort();
+}
+
 // Fetch every data file. A missing one comes back as null.
 async function loadData() {
-  const names = ["meta", "minutes", "space_feeds", "labels", "detections", "matches", "thresholds"];
+  const names = ["meta", "minutes", "space_feeds", "labels", "matches", "thresholds", "episodes", "deep_dives"];
   const files = await Promise.all(
     names.map(async (name) => {
       const response = await fetch(`data/${name}.json`, { cache: "no-store" });
@@ -78,23 +107,87 @@ async function loadData() {
   data = Object.fromEntries(names.map((name, i) => [name, files[i]]));
 }
 
-function tractors() {
-  return Object.keys(data.minutes).sort();
+// ---------- Stacked chart layout ----------
+
+// Stack rows top to bottom by weight. Each row gets its own y axis on one shared x axis.
+function stackRows(rows, gap) {
+  const total = rows.reduce((sum, row) => sum + row.weight, 0);
+  const free = 1 - gap * (rows.length - 1);
+  let top = 1;
+  return rows.map((row, i) => {
+    const height = (row.weight / total) * free;
+    const placed = {
+      ...row,
+      axis: i === 0 ? "y" : `y${i + 1}`,
+      key: i === 0 ? "yaxis" : `yaxis${i + 1}`,
+      domain: [top - height, top],
+    };
+    top -= height + gap;
+    return placed;
+  });
 }
 
-function causeLegend(id) {
-  el(id).innerHTML = Object.keys(CAUSE_COLORS)
-    .map(
-      (cause) =>
-        `<span class="chip"><span class="swatch" style="background:${CAUSE_COLORS[cause]}"></span>${CAUSE_NAMES[cause]}</span>`
-    )
-    .join("");
+function baseLayout(height, range) {
+  return {
+    font: FONT,
+    height,
+    margin: { l: 64, r: 44, t: 28, b: 36 },
+    paper_bgcolor: PAPER,
+    plot_bgcolor: PAPER,
+    showlegend: false,
+    hovermode: "closest",
+    hoverlabel: { bgcolor: INK, bordercolor: INK, font: { color: PAPER, size: 13 } },
+    xaxis: {
+      type: "date",
+      range,
+      anchor: "free",
+      position: 0,
+      showgrid: false,
+      linecolor: RULE,
+      tickfont: { size: 12, color: MUTED },
+      showspikes: true,
+      spikemode: "across",
+      spikesnap: "cursor",
+      spikethickness: 1,
+      spikecolor: FAINT,
+      spikedash: "solid",
+    },
+    shapes: [],
+    annotations: [],
+  };
 }
 
-// ---------- Shared shapes ----------
+function yAxis(row, extra) {
+  return {
+    domain: row.domain,
+    zeroline: false,
+    showgrid: false,
+    fixedrange: true,
+    // Ticks on the right, so the row titles on the left have room
+    side: "right",
+    tickfont: { size: 11, color: FAINT },
+    ...extra,
+  };
+}
 
-// Gray bands where no tractor is working
-function parkedShapes() {
+// A bold row title on the left edge
+function rowTitle(row, text) {
+  return {
+    xref: "paper", yref: `${row.axis} domain`, x: -0.005, y: 0.5, xanchor: "right",
+    text: `<b>${text}</b>`, showarrow: false, font: { size: 15, color: INK },
+  };
+}
+
+// A dashed cutoff line across one row
+function cutoffLine(row, value) {
+  return {
+    type: "line", xref: "paper", x0: 0, x1: 1, yref: row.axis, y0: value, y1: value,
+    line: { color: FAINT, width: 1, dash: "dash" },
+  };
+}
+
+// Light bands where no tractor is working, inside the given window
+function parkedShapes(yref) {
   const lists = tractors().map((tractor) => data.minutes[tractor]);
   const times = lists[0].minute;
   const shapes = [];
@@ -104,8 +197,8 @@ function parkedShapes() {
     if (parked && start === null) start = times[i];
     if (!parked && start !== null) {
       shapes.push({
-        type: "rect", xref: "x", yref: "paper", x0: t(start), x1: t(times[i - 1]), y0: 0, y1: 1,
-        fillcolor: "#9ca3af", opacity: 0.18, line: { width: 0 }, layer: "below",
+        type: "rect", xref: "x", yref: yref || "paper", x0: t(start), x1: t(times[i - 1]), y0: 0, y1: 1,
+        fillcolor: PAPER_2, line: { width: 0 }, layer: "below",
       });
       start = null;
     }
@@ -113,246 +206,259 @@ function parkedShapes() {
   return shapes;
 }
 
-// A dashed line where the dev window ends and eval starts
-function windowDivider() {
-  const evalStart = t(data.meta.windows.eval[0]);
+// Day names along the top of a chart
+function dayAnnotations(days) {
+  return days.map(([day, text, bold]) => ({
+    xref: "x", yref: "paper", x: `${day} 12:00:00`, y: 1, yanchor: "bottom", showarrow: false,
+    text: bold ? `<b>${text}</b>` : text, font: { size: 13, color: bold ? ACCENT : MUTED },
+  }));
+}
+
+// A thin vertical line at each midnight
+function midnightLines(days) {
+  return days.map((day) => ({
+    type: "line", xref: "x", yref: "paper", x0: `${day} 00:00:00`, x1: `${day} 00:00:00`, y0: 0, y1: 1,
+    line: { color: RULE, width: 1 },
+  }));
+}
+
+// Markers at the minutes where a yes/no signal is true, at height y on one row
+function flagTrace(tractor, key, row, y, color, label) {
+  const m = data.minutes[tractor];
+  const x = m.minute.filter((_, j) => m[key][j]).map(t);
   return {
-    shape: {
-      type: "line", xref: "x", yref: "paper", x0: evalStart, x1: evalStart, y0: 0, y1: 1,
-      line: { color: "#111827", width: 2, dash: "dash" },
-    },
-    annotation: {
-      xref: "x", yref: "paper", x: evalStart, y: 1, yanchor: "bottom", showarrow: false,
-      text: "dev ◀ ▶ eval", font: { size: 15 },
-    },
+    type: "scatter", mode: "markers", x, y: x.map(() => y), yaxis: row.axis,
+    marker: { symbol: "square", size: 4, color },
+    hovertemplate: `${tractor} ${label} %{x|%H:%M}<extra></extra>`,
   };
+}
+
+// ---------- Section 1 ----------
+
+function drawCauses() {
+  el("causes").innerHTML = ORDER.map((cause) => `
+    <div class="cause-row">
+      <span class="name" style="color:${CAUSES[cause].color}"><span class="dot" style="background:${CAUSES[cause].color}"></span>${CAUSES[cause].label}</span>
+      <span class="action">${CAUSES[cause].action}</span>
+      <span class="code">${data.meta.actions[cause]}</span>
+    </div>`).join("");
 }
 
 // ---------- Section 2 ----------
 
-// One marker row per tractor, only at the minutes where a yes/no signal is true
-function flagTraces(key, axis, label) {
-  return tractors().map((tractor) => {
-    const m = data.minutes[tractor];
-    const x = m.minute.filter((_, j) => m[key][j]).map(t);
-    return {
-      type: "scatter", mode: "markers", x, y: x.map(() => tractor), yaxis: axis,
-      marker: { symbol: "square", size: 6, color: TRACTOR_COLORS[tractor] },
-      name: tractor, legendgroup: tractor, showlegend: false,
-      hovertemplate: `${tractor} ${label} %{x}<extra></extra>`,
-    };
-  });
-}
-
 function drawDataChart() {
   const cutoffs = data.meta.cutoffs;
-  const rows = [
-    { title: "Weakest satellite signal (dB-Hz)", key: "signal_weakest_db" },
-    { title: "Satellites in view (fewest)", key: "num_sats_min" },
-    { title: "Fix (4 = RTK fixed, 0 = none)", key: "fix_rank_worst", shape: "hv" },
-    // Log scale, so the 0.5 m cutoff is visible next to 20 m drifts
-    { title: "Distance off the row (m, worst, log)", key: "cross_track_error_max_m", log: true, cutoff: [cutoffs.BAD_CROSS_TRACK_ERROR_M, "bad above"] },
-    { title: "Correction link lost", flag: "base_link_lost" },
-    { title: "Minutes stage 4 calls bad", flag: "bad" },
-    { title: "Storm strength (Kp)", feed: "storm_kp", cutoff: [cutoffs.STORM_KP, "storm"] },
-    { title: "Magnetic field drop (Dst, nT)", feed: "storm_field_drop", value: "storm_field_drop_nt", cutoff: [cutoffs.STORM_FIELD_DROP_NT, "storm"] },
-    { title: "Signal flicker (S4)", feed: "signal_flicker_s4", cutoff: [cutoffs.HIGH_FLICKER_S4, "high"] },
+  const feeds = data.space_feeds;
+  const thresholds = data.thresholds ? data.thresholds.tractors : {};
+  const lanes = tractors().map((tractor) => ({ id: tractor, weight: 3, kind: "tractor" }));
+  const debug = view.debugRows
+    ? [
+        { id: "Sats", weight: 1.3, kind: "minutes", key: "num_sats_min", title: "fewest satellites" },
+        { id: "Fix", weight: 1.3, kind: "minutes", key: "fix_rank_worst", title: "fix (4 = RTK fixed)", shape: "hv" },
+        { id: "Bad", weight: 1.3, kind: "bad" },
+      ]
+    : [];
+  const feedRows = [
+    { id: "Kp", weight: 1.4, kind: "kp" },
+    { id: "Dst", weight: 1.4, kind: "dst" },
+    { id: "S4", weight: 1.4, kind: "s4" },
+    { id: "Reports", weight: 0.7, kind: "reports" },
   ];
-  const gap = 0.022;
-  const height = 1 / rows.length;
-  const layout = {
-    font: FONT, height: 1180, margin: { l: 70, r: 20, t: 40, b: 40 },
-    showlegend: true, legend: { orientation: "h", y: 1.04, x: 1, xanchor: "right" },
-    hovermode: "closest", plot_bgcolor: "#ffffff",
-    // Time labels along the bottom of the whole stack
-    xaxis: {
-      type: "date", anchor: "free", position: 0,
-      showspikes: true, spikemode: "across", spikesnap: "cursor", spikethickness: 1,
-    },
-    shapes: [], annotations: [],
-  };
+  const rows = stackRows([...lanes, ...debug, ...feedRows], 0.018);
+  const layout = baseLayout(view.debugRows ? 980 : 760, null);
+  layout.xaxis.autorange = true;
+  delete layout.xaxis.range;
   const traces = [];
-  const axisFor = {};
 
-  rows.forEach((row, i) => {
-    const axis = i === 0 ? "y" : `y${i + 1}`;
-    const axisKey = i === 0 ? "yaxis" : `yaxis${i + 1}`;
-    axisFor[row.flag || row.key || row.feed] = axis;
-    const top = 1 - i * height;
-    // Each row leaves a gap above it for its title
-    const rowTop = top - gap;
-    layout[axisKey] = { domain: [top - height + 0.006, rowTop], automargin: true, zeroline: false };
-    // 1 cm to 30 m, so near-zero parked values don't squash the scale
-    if (row.log) Object.assign(layout[axisKey], { type: "log", range: [-2, Math.log10(30)], dtick: 1 });
-    layout.annotations.push({
-      xref: "paper", yref: "paper", x: 0, y: rowTop, xanchor: "left", yanchor: "bottom",
-      text: `<b>${row.title}</b>`, showarrow: false, font: { size: 14 },
-    });
+  for (const row of rows) {
+    layout.annotations.push(rowTitle(row, row.id));
 
-    if (row.flag) {
-      layout[axisKey].type = "category";
-      layout[axisKey].categoryarray = tractors().slice().reverse();
-      traces.push(...flagTraces(row.flag, axis, row.title.toLowerCase()));
-    } else if (row.key) {
+    if (row.kind === "tractor") {
+      // Weakest satellite signal, with link-lost and off-row ticks underneath
+      const m = data.minutes[row.id];
+      layout[row.key] = yAxis(row, { range: [-12, 48], tickvals: [0, 20, 40] });
+      traces.push({
+        type: "scatter", mode: "lines", x: m.minute.map(t), y: m.signal_weakest_db, yaxis: row.axis,
+        line: { color: INK, width: 1.2 },
+        hovertemplate: `${row.id} %{x|%b %d %H:%M}<br>weakest satellite %{y} dB-Hz<extra></extra>`,
+      });
+      traces.push(flagTrace(row.id, "base_link_lost", row, -4, INK, "correction link lost"));
+      traces.push(flagTrace(row.id, "off_row", row, -9, CAUSES.SPOOFING.color, "off the row"));
+      const cut = (thresholds[row.id] || {}).bad_below_signal_weakest_db;
+      if (cut) layout.shapes.push(cutoffLine(row, cut));
+
+      // Training labels as colored bands on this tractor's lane
+      for (const label of data.labels.filter((l) => l.tractors.includes(row.id))) {
+        layout.shapes.push({
+          type: "rect", xref: "x", yref: `${row.axis} domain`, x0: t(label.start), x1: t(label.end), y0: 0, y1: 1,
+          fillcolor: CAUSES[label.class].color, opacity: label.class === "MULTIPATH" ? 0.45 : 0.2,
+          line: { width: 0 }, layer: "below",
+        });
+      }
+    } else if (row.kind === "minutes") {
+      layout[row.key] = yAxis(row, { title: { text: row.title, font: { size: 11, color: FAINT } } });
       for (const tractor of tractors()) {
         const m = data.minutes[tractor];
         traces.push({
-          type: "scatter", mode: "lines", x: m.minute.map(t), y: m[row.key], yaxis: axis,
-          line: { color: TRACTOR_COLORS[tractor], width: 1.4, shape: row.shape || "linear" },
-          name: tractor, legendgroup: tractor, showlegend: i === 0,
-          hovertemplate: `${tractor} %{x}<br>${row.title}: %{y}<extra></extra>`,
+          type: "scatter", mode: "lines", x: m.minute.map(t), y: m[row.key], yaxis: row.axis,
+          line: { color: TRACTOR_COLORS[tractor], width: 1.2, shape: row.shape || "linear" },
+          hovertemplate: `${tractor} %{x|%H:%M}<br>${row.title}: %{y}<extra></extra>`,
         });
       }
-    } else {
-      const feed = data.space_feeds[row.feed];
-      const values = feed[row.value || row.feed];
-      const trace = {
-        x: feed.ts.map(t), y: values, yaxis: axis, name: row.title, showlegend: false,
-        hovertemplate: `%{x}<br>${row.title}: %{y}<extra></extra>`,
-      };
-      if (row.feed === "storm_kp") {
-        // Kp comes every 3 hours, so each bar covers its 3 hours
-        Object.assign(trace, {
-          type: "bar", width: 3 * 3600 * 1000, offset: 0,
-          marker: { color: values.map((kp) => (kp >= cutoffs.STORM_KP ? "#dc2626" : "#6b7280")) },
+    } else if (row.kind === "bad") {
+      layout[row.key] = yAxis(row, { type: "category", categoryarray: tractors().slice().reverse() });
+      for (const tractor of tractors()) {
+        const m = data.minutes[tractor];
+        const x = m.minute.filter((_, j) => m.bad[j]).map(t);
+        traces.push({
+          type: "scatter", mode: "markers", x, y: x.map(() => tractor), yaxis: row.axis,
+          marker: { symbol: "square", size: 4, color: INK },
+          hovertemplate: `${tractor} stage 4 calls this minute bad %{x|%H:%M}<extra></extra>`,
         });
-      } else {
-        Object.assign(trace, { type: "scatter", mode: "lines", line: { color: "#374151", width: 2 } });
       }
-      traces.push(trace);
-    }
-
-    // A dotted red line at the config cutoff for this row
-    if (row.cutoff) {
-      const [value, label] = row.cutoff;
-      // Plotly places shapes on a log axis by the log of the value
-      const y = row.log ? Math.log10(value) : value;
-      layout.shapes.push({
-        type: "line", xref: "paper", x0: 0, x1: 1, yref: axis, y0: y, y1: y,
-        line: { color: "#dc2626", width: 1.5, dash: "dot" },
+    } else if (row.kind === "kp") {
+      // Kp comes every 3 hours, so each bar covers its 3 hours
+      const kp = feeds.storm_kp;
+      layout[row.key] = yAxis(row, { range: [0, 9], tickvals: [0, 5, 9] });
+      traces.push({
+        type: "bar", x: kp.ts.map(t), y: kp.storm_kp, yaxis: row.axis, width: 3 * 3600 * 1000 * 0.85, offset: 0,
+        marker: { color: kp.storm_kp.map((v) => (v >= cutoffs.STORM_KP ? CAUSES.SPACE_WEATHER.color : QUIET)) },
+        hovertemplate: `storm strength (Kp) %{y}<br>%{x|%b %d %H:%M}<extra></extra>`,
       });
-      layout.annotations.push({
-        xref: "paper", x: 1, xanchor: "right", yref: axis, y, yanchor: "bottom",
-        text: `${label} ${value}`, showarrow: false, font: { size: 12, color: "#dc2626" },
+      layout.shapes.push(cutoffLine(row, cutoffs.STORM_KP));
+    } else if (row.kind === "dst") {
+      const dst = feeds.storm_field_drop;
+      layout[row.key] = yAxis(row, { tickvals: [0, -200, -400] });
+      traces.push({
+        type: "scatter", mode: "lines", x: dst.ts.map(t), y: dst.storm_field_drop_nt, yaxis: row.axis,
+        line: { color: CAUSES.SPACE_WEATHER.color, width: 1.8 },
+        hovertemplate: `magnetic field drop (Dst) %{y} nT<br>%{x|%b %d %H:%M}<extra></extra>`,
+      });
+      layout.shapes.push(cutoffLine(row, cutoffs.STORM_FIELD_DROP_NT));
+    } else if (row.kind === "s4") {
+      const s4 = feeds.signal_flicker_s4;
+      layout[row.key] = yAxis(row, { range: [0, 0.85], tickvals: [0, 0.3, 0.8] });
+      traces.push({
+        type: "scatter", mode: "lines", x: s4.ts.map(t), y: s4.signal_flicker_s4, yaxis: row.axis,
+        line: { color: CAUSES.SPACE_WEATHER.color, width: 1.8 },
+        hovertemplate: `signal flicker (S4) %{y}<br>%{x|%b %d %H:%M}<extra></extra>`,
+      });
+      layout.shapes.push(cutoffLine(row, cutoffs.HIGH_FLICKER_S4));
+    } else if (row.kind === "reports") {
+      // Advisories as gray squares, interference reports as red triangles
+      layout[row.key] = yAxis(row, { range: [0, 1], showticklabels: false });
+      const adv = feeds.advisories;
+      traces.push({
+        type: "scatter", mode: "markers", x: adv.issued.map(t), y: adv.issued.map(() => 0.5), yaxis: row.axis,
+        marker: { symbol: "square", size: 12, color: QUIET },
+        text: adv.text.map((text, j) => `${adv.advisory_id[j]}: ${escapeHtml(text)}`),
+        hovertemplate: `%{x|%b %d %H:%M}<br>%{text}<extra></extra>`,
+      });
+      const rfi = feeds.interference_reports;
+      traces.push({
+        type: "scatter", mode: "markers", x: rfi.received.map(t), y: rfi.received.map(() => 0.5), yaxis: row.axis,
+        marker: { symbol: "triangle-up", size: 14, color: CAUSES.JAMMING.color },
+        text: rfi.text.map((text, j) => `${rfi.report_id[j]} (confidence ${rfi.confidence[j]}): ${escapeHtml(text)}`),
+        hovertemplate: `%{x|%b %d %H:%M}<br>%{text}<extra></extra>`,
       });
     }
-  });
-
-  // Constellation advisories: an amber line at each issued time, on the satellites row
-  const advisories = data.space_feeds.advisories;
-  const satsAxis = axisFor.num_sats_min;
-  advisories.issued.forEach((issued, j) => {
-    layout.shapes.push({
-      type: "line", xref: "x", yref: `${satsAxis} domain`, x0: t(issued), x1: t(issued), y0: 0, y1: 1,
-      line: { color: "#d97706", width: 2.5 },
-    });
-    const what = advisories.svn[j] ? `${advisories.svn[j]} advisory` : `${advisories.type[j].toLowerCase().replace("_", " ")} advisory`;
-    layout.annotations.push({
-      xref: "x", yref: `${satsAxis} domain`, x: t(issued), y: 1, xanchor: "left", yanchor: "top",
-      text: what, showarrow: false, font: { size: 12, color: "#92400e" },
-      hovertext: escapeHtml(advisories.text[j]),
-    });
-  });
-
-  // Interference reports: a dotted line at each received time
-  const reports = data.space_feeds.interference_reports;
-  const linkAxis = axisFor.base_link_lost;
-  reports.received.forEach((received, j) => {
-    layout.shapes.push({
-      type: "line", xref: "x", yref: "paper", x0: t(received), x1: t(received), y0: 0, y1: 1,
-      line: { color: "#b91c1c", width: 1.5, dash: "dot" },
-    });
-    // Reports can be close together, so their labels alternate height
-    layout.annotations.push({
-      xref: "x", yref: `${linkAxis} domain`, x: t(received), y: j % 2 ? 0.3 : 0.7, xanchor: "left",
-      showarrow: false, bgcolor: "#ffffff",
-      text: `interference ${reports.confidence[j]}`, font: { size: 12, color: "#b91c1c" },
-      hovertext: escapeHtml(reports.text[j]),
-    });
-  });
-
-  // Training labels as colored bands across every row
-  for (const label of data.labels) {
-    layout.shapes.push({
-      type: "rect", xref: "x", yref: "paper", x0: t(label.start), x1: t(label.end), y0: 0, y1: 1,
-      fillcolor: CAUSE_COLORS[label.class], opacity: 0.16, line: { width: 0 }, layer: "below",
-    });
   }
 
+  // Parked time, the scored eval window, midnights and day names
+  const [evalStart, evalEnd] = data.meta.windows.eval;
   layout.shapes.push(...parkedShapes());
-  const divider = windowDivider();
-  layout.shapes.push(divider.shape);
-  layout.annotations.push(divider.annotation);
+  layout.shapes.push({
+    type: "rect", xref: "x", yref: "paper", x0: t(evalStart), x1: t(evalEnd), y0: 0, y1: 1,
+    fillcolor: ACCENT, opacity: 0.05, line: { width: 0 }, layer: "below",
+  });
+  layout.shapes.push(...midnightLines(["2026-05-05", "2026-05-06"]));
+  layout.annotations.push(...dayAnnotations([
+    ["2026-05-04", "May 4, dev"], ["2026-05-05", "May 5, dev"], ["2026-05-06", "May 6, eval (scored)", true],
+  ]));
 
   Plotly.react("data-chart", traces, layout, PLOT_CONFIG);
+
+  el("data-legend").innerHTML = [
+    ...ORDER.map((c) => `<span><span class="swatch" style="background:${CAUSES[c].color};opacity:0.5"></span>${CAUSES[c].label} label</span>`),
+    `<span><span class="swatch" style="height:5px;background:${INK}"></span>correction link lost</span>`,
+    `<span><span class="swatch" style="height:5px;background:${CAUSES.SPOOFING.color}"></span>off the row (over ${data.meta.cutoffs.BAD_CROSS_TRACK_ERROR_M} m)</span>`,
+    `<span><svg width="12" height="10" viewBox="0 0 12 10" aria-hidden="true"><path d="M0 10L6 0l6 10Z" fill="${CAUSES.JAMMING.color}"></path></svg>interference report</span>`,
+    `<span><span class="swatch" style="background:${QUIET}"></span>satellite advisory</span>`,
+    `<span><span style="width:18px;border-top:2px dashed ${FAINT}"></span>cutoff</span>`,
+  ].join("");
 }
 
-// ---------- Section 4: lanes ----------
+// ---------- Section 3 ----------
 
-// Bars for labels or detections, one trace per cause so the legend works
-function laneTraces(items, laneFor, styleFor, hoverFor) {
+function drawRules() {
+  el("stages").innerHTML = STAGES.map(([group, stages], i) => `
+    <div class="stage-group">
+      <div>
+        <h3>${group}</h3>
+        <ol>${stages.map(([n, name, what]) => `<li><span class="mono">${n}</span><span><strong>${name}</strong> <span class="what">${what}</span></span></li>`).join("")}</ol>
+      </div>
+      ${i < STAGES.length - 1 ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${QUIET}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>` : ""}
+    </div>`).join("");
+
+  el("tests").innerHTML = `<table class="tbl">
+    <thead><tr><th>Cause</th><th>Passes when</th></tr></thead>
+    <tbody>${ORDER.map((c) => `<tr><td style="white-space:nowrap;width:200px;font-weight:700;color:${CAUSES[c].color}">${CAUSES[c].label}</td><td>${escapeHtml(data.meta.tests[c])}</td></tr>`).join("")}</tbody>
+  </table>`;
+
+  if (!data.thresholds) {
+    el("thresholds").innerHTML = `<p class="error">No thresholds.json yet: run python run.py</p>`;
+    return;
+  }
+  el("thresholds").innerHTML = `<table class="tbl">
+    <thead><tr><th>Tractor</th><th class="num">Working minutes</th><th class="num">Normal signal</th><th class="num">Normal weakest satellite</th><th class="num">Bad below</th></tr></thead>
+    <tbody>${Object.entries(data.thresholds.tractors).map(([tractor, v]) => `<tr>
+      <td style="font-weight:700">${tractor}</td><td class="num">${v.working_minutes.toLocaleString("en-US")}</td>
+      <td class="num">${v.normal_signal_mean_db.toFixed(1)} dB-Hz</td><td class="num">${v.normal_signal_weakest_db.toFixed(1)} dB-Hz</td>
+      <td class="num" style="font-weight:700">${v.bad_below_signal_weakest_db.toFixed(1)} dB-Hz</td></tr>`).join("")}</tbody>
+  </table>`;
+}
+
+// ---------- Section 4 ----------
+
+// Hover text for a label or detection
+function hoverLines(item, extra) {
+  return [
+    `<b>${CAUSES[item.class].label}</b> ${item.tractors.join(", ")}`,
+    `${hhmm(item.start)} to ${hhmm(item.end)} (${lengthText(item.start, item.end)})`,
+    ...extra,
+  ].join("<br>");
+}
+
+// Bars on one lane row, one trace per cause; short ones also get a dot so they show
+function laneTraces(items, row, styleFor, hoverFor) {
   const traces = [];
-  for (const cause of Object.keys(CAUSE_COLORS)) {
-    const bars = [];
-    for (const item of items.filter((i) => i.class === cause)) {
-      for (const tractor of item.tractors) bars.push({ item, lane: laneFor(tractor, item) });
-    }
-    if (!bars.length) continue;
-    const styles = bars.map((bar) => styleFor(bar.item));
+  for (const cause of ORDER) {
+    const mine = items.filter((item) => item.class === cause);
+    if (!mine.length) continue;
+    const styles = mine.map(styleFor);
     traces.push({
-      type: "bar", orientation: "h", name: CAUSE_NAMES[cause], legendgroup: cause,
-      showlegend: false,
-      y: bars.map((bar) => bar.lane),
-      base: bars.map((bar) => t(bar.item.start)),
-      x: bars.map((bar) => Date.parse(bar.item.end) - Date.parse(bar.item.start)),
+      type: "bar", orientation: "h", yaxis: row.axis,
+      y: mine.map(() => 0.5), base: mine.map((item) => t(item.start)),
+      x: mine.map((item) => Date.parse(item.end) - Date.parse(item.start)),
+      width: 0.8,
       marker: {
-        color: CAUSE_COLORS[cause],
-        opacity: styles.map((s) => s.opacity),
-        pattern: { shape: styles.map((s) => s.pattern), fgcolor: "#111827", solidity: 0.3 },
-        line: { color: styles.map((s) => s.outline), width: 2 },
+        color: CAUSES[cause].color, opacity: styles.map((s) => s.opacity),
+        pattern: { shape: styles.map((s) => s.pattern), fgcolor: PAPER, solidity: 0.4 },
+        line: { width: 0 },
       },
-      hovertext: bars.map((bar) => hoverFor(bar.item)),
-      hoverinfo: "text",
-      width: 0.7,
+      hovertext: mine.map(hoverFor), hoverinfo: "text",
     });
-
-    // Short items are too thin to see on a 2-day axis, so add a dot
-    const short = bars.filter((bar) => minutesBetween(bar.item.start, bar.item.end) < 15);
+    const short = mine.filter((item) => minutesBetween(item.start, item.end) < 15);
     if (short.length) {
       traces.push({
-        type: "scatter", mode: "markers", legendgroup: cause, showlegend: false,
-        y: short.map((bar) => bar.lane),
-        x: short.map((bar) => t(bar.item.start)),
-        marker: {
-          color: CAUSE_COLORS[cause], size: short.map((bar) => styleFor(bar.item).dot || 11),
-          symbol: "diamond", opacity: short.map((bar) => styleFor(bar.item).opacity),
-        },
-        hovertext: short.map((bar) => hoverFor(bar.item)),
-        hoverinfo: "text",
+        type: "scatter", mode: "markers", yaxis: row.axis,
+        x: short.map((item) => t(item.start)), y: short.map(() => 0.5),
+        marker: { color: CAUSES[cause].color, size: short.map((item) => styleFor(item).dot), symbol: "diamond", opacity: short.map((item) => styleFor(item).opacity) },
+        hovertext: short.map(hoverFor), hoverinfo: "text",
       });
     }
   }
   return traces;
-}
-
-function laneLayout(lanes, window) {
-  const [start, end] = data.meta.windows[window];
-  return {
-    font: FONT, barmode: "overlay", height: 120 + lanes.length * 44,
-    margin: { l: 150, r: 20, t: 30, b: 40 }, hovermode: "closest",
-    showlegend: false,
-    xaxis: { type: "date", range: [t(start), t(end)], showspikes: true, spikemode: "across", spikethickness: 1 },
-    yaxis: { type: "category", categoryarray: lanes.slice().reverse(), automargin: true },
-    shapes: parkedShapes(),
-  };
-}
-
-function hoverLines(item, extra) {
-  return [
-    `<b>${CAUSE_NAMES[item.class]}</b> ${item.tractors.join(", ")}`,
-    `${clock(item.start)} to ${clock(item.end)} (${lengthText(item.start, item.end)})`,
-    ...extra,
-  ].join("<br>");
 }
 
 function drawDevChart() {
@@ -361,164 +467,413 @@ function drawDevChart() {
     return;
   }
   const labelInfo = Object.fromEntries(data.matches.labels.map((l) => [l.label_id, l]));
-  const lanes = tractors().flatMap((tractor) => [`${tractor} labels`, `${tractor} mine`, `${tractor} short (free)`]);
+  const specs = tractors().flatMap((tractor) => [
+    { id: tractor, tractor, weight: 2.4, kind: "signal" },
+    { id: "labels", tractor, weight: 0.55, kind: "labels" },
+    { id: "mine", tractor, weight: 0.55, kind: "mine" },
+    { id: "short", tractor, weight: 0.4, kind: "free" },
+  ]);
+  const rows = stackRows(specs, 0.012);
+  const [devStart, devEnd] = data.meta.windows.dev;
+  const layout = baseLayout(820, [t(devStart), t(devEnd)]);
+  const traces = [];
+  const thresholds = data.thresholds ? data.thresholds.tractors : {};
 
-  const labelTraces = laneTraces(
-    data.labels,
-    (tractor) => `${tractor} labels`,
-    (label) => {
-      const ok = labelInfo[label.id]?.status === "hit";
-      return { opacity: 0.85, pattern: ok ? "" : "/", outline: ok ? "#ffffff" : "#991b1b" };
-    },
-    (label) => {
-      const info = labelInfo[label.id] || {};
-      return hoverLines(label, [
-        `Label ${label.id}: <b>${STATUS_NAMES[info.status] || "?"}</b>`,
-        `Action ${label.recommended_action}`,
-      ]);
+  for (const row of rows) {
+    if (row.kind === "signal") {
+      const m = data.minutes[row.tractor];
+      layout[row.key] = yAxis(row, { range: [0, 48], tickvals: [0, 20, 40] });
+      layout.annotations.push(rowTitle(row, row.tractor));
+      traces.push({
+        type: "scatter", mode: "lines", x: m.minute.map(t), y: m.signal_weakest_db, yaxis: row.axis,
+        line: { color: INK, width: 1.2 },
+        hovertemplate: `${row.tractor} %{x|%b %d %H:%M}<br>weakest satellite %{y} dB-Hz<extra></extra>`,
+      });
+      const cut = (thresholds[row.tractor] || {}).bad_below_signal_weakest_db;
+      if (cut) layout.shapes.push(cutoffLine(row, cut));
+      continue;
     }
-  );
 
-  // Short multipath reports that aren't scored go in their own thin lane
-  const detectionTraces = laneTraces(
-    data.matches.detections,
-    (tractor, d) => (d.status === "exempt" ? `${tractor} short (free)` : `${tractor} mine`),
-    (d) => ({
-      opacity: d.status === "exempt" ? 0.45 : 0.95,
-      pattern: d.status === "false_alarm" ? "x" : "",
-      outline: d.status === "false_alarm" ? "#991b1b" : "#ffffff",
-      dot: d.status === "exempt" ? 6 : 11,
-    }),
-    (d) => {
-      const info = d.label_id ? labelInfo[d.label_id] : null;
-      const extra = [`<b>${STATUS_NAMES[d.status]}</b>${d.label_id ? ` (${d.label_id})` : ""}`];
-      if (info && info.time_iou !== undefined) {
-        extra.push(`time IoU ${info.time_iou.toFixed(2)}, onset ${info.onset_min >= 0 ? "+" : ""}${info.onset_min.toFixed(0)} min`);
-      }
-      extra.push(`${d.action}, confidence ${d.confidence.toFixed(2)}`);
-      return hoverLines(d, extra);
+    // Lane rows: a light track with the bars on it
+    layout[row.key] = yAxis(row, { range: [0, 1], showticklabels: false });
+    layout.annotations.push({
+      xref: "paper", yref: `${row.axis} domain`, x: -0.005, y: 0.5, xanchor: "right",
+      text: row.id, showarrow: false, font: { size: 11, color: MUTED },
+    });
+    layout.shapes.push({
+      type: "rect", xref: "paper", yref: `${row.axis} domain`, x0: 0, x1: 1, y0: 0.05, y1: 0.95,
+      fillcolor: PAPER_2, line: { width: 0 }, layer: "below",
+    });
+
+    if (row.kind === "labels") {
+      const labels = data.labels.filter((l) => l.tractors.includes(row.tractor));
+      traces.push(...laneTraces(labels, row,
+        (label) => (labelInfo[label.id]?.status === "hit" ? { opacity: 1, pattern: "", dot: 10 } : { opacity: 1, pattern: "/", dot: 10 }),
+        (label) => hoverLines(label, [`Label ${label.id}: <b>${(labelInfo[label.id] || {}).status || "?"}</b>`])));
+    } else {
+      const free = row.kind === "free";
+      const detections = data.matches.detections.filter(
+        (d) => d.tractors.includes(row.tractor) && (d.status === "exempt") === free
+      );
+      traces.push(...laneTraces(detections, row,
+        (d) => ({ opacity: free ? 0.45 : 1, pattern: d.status === "false_alarm" ? "x" : "", dot: free ? 5 : 10 }),
+        (d) => {
+          const info = d.label_id ? labelInfo[d.label_id] : null;
+          const extra = [d.status === "exempt" ? "short multipath (not scored)" : `<b>${d.status.replace("_", " ")}</b>${d.label_id ? ` (${d.label_id})` : ""}`];
+          if (info && info.time_iou !== undefined) extra.push(`time IoU ${info.time_iou.toFixed(2)}, onset ${info.onset_min >= 0 ? "+" : ""}${info.onset_min.toFixed(0)} min`);
+          extra.push(`confidence ${d.confidence.toFixed(2)}`);
+          return hoverLines(d, extra);
+        }));
     }
-  );
+  }
 
-  Plotly.react("dev-chart", [...labelTraces, ...detectionTraces], laneLayout(lanes, "dev"), PLOT_CONFIG);
+  layout.shapes.push(...parkedShapes());
+  layout.shapes.push(...midnightLines(["2026-05-05"]));
+  layout.annotations.push(...dayAnnotations([["2026-05-04", "May 4"], ["2026-05-05", "May 5"]]));
+  Plotly.react("dev-chart", traces, layout, PLOT_CONFIG);
+
+  el("dev-legend").innerHTML = [
+    ...ORDER.map((c) => `<span><span class="swatch" style="background:${CAUSES[c].color}"></span>${CAUSES[c].label}</span>`),
+    `<span>Hatched: miss or false alarm. Faded "short" lane: short multipath, not scored.</span>`,
+  ].join("");
 }
-
-// ---------- Section 4 tables ----------
 
 function drawScorecard() {
   const m = data.matches;
-  if (!m) {
-    el("scorecard").innerHTML = "";
-    el("label-table").innerHTML = "";
-    el("confusion").innerHTML = "";
-    return;
-  }
-  const rows = Object.entries(m.counts)
-    .map(
-      ([cause, c]) => `<tr>
-        <td><span class="swatch" style="background:${CAUSE_COLORS[cause]}"></span> ${CAUSE_NAMES[cause]}</td>
-        <td class="num">${c.hits}</td><td class="num">${c.false}</td><td class="num">${c.missed}</td>
-        <td class="num">${c.f1.toFixed(2)}</td></tr>`
-    )
-    .join("");
-  el("scorecard").innerHTML = `
-    <div class="big-numbers">
-      <div><strong>${m.total.toFixed(1)} / 40</strong>dev score</div>
-      <div><strong>${m.macro_f1.toFixed(2)}</strong>macro-F1 (25 pts)</div>
-      <div><strong>${m.mean_onset.toFixed(2)}</strong>onset (15 pts)</div>
-      <div><strong>${m.actions_agreed} / ${m.labels.length}</strong>actions agreed</div>
-      <div><strong>${m.free_multipath}</strong>short multipath (not scored)</div>
-    </div>
-    <table><tr><th>Cause</th><th>Hits</th><th>False alarms</th><th>Missed</th><th>F1</th></tr>${rows}</table>`;
+  if (!m) return;
+  el("figures").innerHTML = [
+    [`${m.total.toFixed(1)} / 40`, "Dev score"],
+    [m.macro_f1.toFixed(2), "Macro-F1 (25 pts)"],
+    [m.mean_onset.toFixed(2), "Onset credit (15 pts)"],
+    [`${m.actions_agreed} / ${m.labels.length}`, "Actions agree"],
+    [m.free_multipath, "Short multipath, not scored"],
+  ].map(([value, label]) => `<div><strong>${value}</strong><span>${label}</span></div>`).join("");
+
+  el("cause-score").innerHTML = `<table class="tbl">
+    <thead><tr><th>Cause</th><th class="num">Labels</th><th class="num">Hits</th><th class="num">False alarms</th><th class="num">Misses</th><th class="num">F1</th></tr></thead>
+    <tbody>${ORDER.map((cause) => {
+      const c = m.counts[cause];
+      return `<tr><td style="font-weight:700;color:${CAUSES[cause].color}">${CAUSES[cause].label}</td>
+        <td class="num">${c.hits + c.missed}</td><td class="num">${c.hits}</td><td class="num">${c.false}</td>
+        <td class="num">${c.missed}</td><td class="num">${c.f1.toFixed(2)}</td></tr>`;
+    }).join("")}</tbody>
+  </table>`;
 
   const labelsById = Object.fromEntries(data.labels.map((l) => [l.id, l]));
-  el("label-table").innerHTML = `<table>
-    <tr><th>Label</th><th>Cause</th><th>Tractors</th><th>Result</th><th>Onset error</th><th>Time IoU</th><th>Credit</th></tr>
-    ${m.labels
-      .map((entry) => {
-        const label = labelsById[entry.label_id];
-        const onset = entry.onset_min === undefined ? "" : `${entry.onset_min >= 0 ? "+" : ""}${entry.onset_min.toFixed(0)} min`;
-        const iou = entry.time_iou === undefined ? "" : entry.time_iou.toFixed(2);
-        return `<tr><td class="mono">${entry.label_id}</td><td>${CAUSE_NAMES[label.class]}</td>
-          <td>${label.tractors.join(", ")}</td>
-          <td><span class="tag ${entry.status}">${STATUS_NAMES[entry.status]}</span></td>
-          <td class="num">${onset}</td><td class="num">${iou}</td><td class="num">${entry.credit.toFixed(2)}</td></tr>`;
-      })
-      .join("")}</table>`;
+  const resultNames = { hit: "Hit", missed: "Missed", wrong_cause: "Wrong cause" };
+  el("label-table").innerHTML = `<table class="tbl">
+    <thead><tr><th>Label</th><th>Cause</th><th>Tractors</th><th>Start</th><th>Result</th><th class="num">Time IoU</th><th class="num">Onset</th></tr></thead>
+    <tbody>${m.labels.map((entry) => {
+      const label = labelsById[entry.label_id];
+      const onset = entry.onset_min === undefined ? "" : entry.onset_min === 0 ? "on time" : `${entry.onset_min > 0 ? "+" : "−"}${Math.abs(entry.onset_min).toFixed(0)} min`;
+      return `<tr><td class="mono">${entry.label_id}</td>
+        <td style="color:${CAUSES[label.class].color};font-weight:600;white-space:nowrap">${CAUSES[label.class].label}</td>
+        <td>${label.tractors.join(", ")}</td><td class="mono" style="white-space:nowrap">${dayName(label.start)} ${hhmm(label.start)}</td>
+        <td class="result ${entry.status}">${resultNames[entry.status]}</td>
+        <td class="num mono">${entry.time_iou === undefined ? "" : entry.time_iou.toFixed(2)}</td><td class="num mono">${onset}</td></tr>`;
+    }).join("")}</tbody>
+  </table>`;
+}
 
-  // Label cause down the side, what I said across the top
-  const causes = Object.keys(CAUSE_COLORS);
-  const grid = Object.fromEntries(causes.map((c) => [c, Object.fromEntries([...causes, "missed"].map((d) => [d, 0]))]));
-  for (const entry of m.labels) {
-    const said = entry.detection ? entry.detection.class : "missed";
-    grid[labelsById[entry.label_id].class][said] += 1;
+// ---------- Section 5 ----------
+
+// The days that have data, as "2026-05-04"
+function dayList() {
+  return [...new Set(data.minutes[tractors()[0]].minute.map((text) => text.slice(0, 10)))];
+}
+
+// The episodes on the chosen day, oldest first, with multipath hidden unless asked
+function dayEpisodes() {
+  return (data.episodes || [])
+    .filter((e) => e.start.slice(0, 10) === view.day)
+    .filter((e) => view.showMultipath || e.class !== "MULTIPATH")
+    .sort((a, b) => a.start.localeCompare(b.start));
+}
+
+// Minutes since midnight on the chosen day, as a share of the day
+function dayShare(text) {
+  const minutes = (Date.parse(text) - Date.parse(`${view.day}T00:00:00Z`)) / 60000;
+  return Math.max(0, Math.min(1, minutes / 1440));
+}
+
+function drawEval() {
+  const days = dayList();
+  if (!view.day) view.day = data.meta.windows.eval[0].slice(0, 10);
+  const evalDay = data.meta.windows.eval[0].slice(0, 10);
+
+  el("days").innerHTML = days.map((day) => `
+    <button type="button" class="pill" data-day="${day}" aria-pressed="${day === view.day}">${dayName(day)}<small>${day >= evalDay ? "eval" : "dev"}</small></button>`).join("");
+  el("days").querySelectorAll("button").forEach((button) =>
+    button.addEventListener("click", () => {
+      view.day = button.dataset.day;
+      view.picked = null;
+      drawEval();
+    })
+  );
+
+  const allOnDay = (data.episodes || []).filter((e) => e.start.slice(0, 10) === view.day);
+  const multipathCount = allOnDay.filter((e) => e.class === "MULTIPATH").length;
+  el("multipath-label").textContent = `Show multipath (${multipathCount})`;
+
+  const episodes = dayEpisodes();
+  episodes.forEach((e, i) => (e.index = i));
+  if (view.picked === null || view.picked >= episodes.length) {
+    // Start on the highest-confidence call that day
+    view.picked = episodes.reduce((best, e, i) => (e.confidence > (episodes[best] || {}).confidence ? i : best), 0);
   }
-  const falseAlarms = m.detections.filter((d) => d.status === "false_alarm" && !d.label_id);
-  el("confusion").innerHTML = `<table>
-    <tr><th>Label ↓ / mine →</th>${causes.map((c) => `<th>${CAUSE_NAMES[c]}</th>`).join("")}<th>Missed</th></tr>
-    ${causes
-      .map(
-        (c) => `<tr><th>${CAUSE_NAMES[c]}</th>${[...causes, "missed"]
-          .map((d) => `<td class="num">${grid[c][d] || ""}</td>`)
-          .join("")}</tr>`
-      )
-      .join("")}
-    <tr><th>No label (false alarm)</th>${causes
-      .map((c) => `<td class="num">${falseAlarms.filter((d) => d.class === c).length || ""}</td>`)
-      .join("")}<td></td></tr>
-    </table>`;
+
+  drawField(episodes);
+  drawEpisodeList(episodes);
+  drawDetail(episodes[view.picked]);
+}
+
+// One strip per tractor: parked time, the real weakest-signal line, and a block per episode
+function drawField(episodes) {
+  const rows = tractors().map((tractor) => {
+    const m = data.minutes[tractor];
+
+    // Minutes on this day, as x 0-1440 and y 0-72 (45 dB-Hz at the top)
+    let path = "";
+    let pen = false;
+    const parked = [];
+    let parkStart = null;
+    m.minute.forEach((minute, j) => {
+      if (minute.slice(0, 10) !== view.day) return;
+      const x = dayShare(minute) * 1440;
+      if (!m.working[j]) {
+        if (parkStart === null) parkStart = x;
+        pen = false;
+        return;
+      }
+      if (parkStart !== null) {
+        parked.push([parkStart, x]);
+        parkStart = null;
+      }
+      const value = m.signal_weakest_db[j];
+      if (value === null) {
+        pen = false;
+        return;
+      }
+      const y = 68 - (Math.min(value, 45) / 45) * 64;
+      path += `${pen ? "L" : "M"}${x.toFixed(0)} ${y.toFixed(1)}`;
+      pen = true;
+    });
+    if (parkStart !== null) parked.push([parkStart, 1440]);
+
+    const blocks = episodes.filter((e) => e.tractors.includes(tractor)).map((e) => {
+      const left = dayShare(e.start) * 100;
+      const width = Math.max((dayShare(e.end) - dayShare(e.start)) * 100, 0.1);
+      const color = CAUSES[e.class].color;
+      return `<button type="button" class="block${e.index === view.picked ? " picked" : ""}" data-index="${e.index}"
+        aria-label="${CAUSES[e.class].label} on ${tractor}, ${hhmm(e.start)} to ${hhmm(e.end)}"
+        style="left:${left}%;width:${width}%;border-top-color:${color};background:${color}22"></button>`;
+    }).join("");
+
+    return `<div class="field-row"><span class="id">${tractor}</span>
+      <div class="strip">
+        ${parked.map(([a, b]) => `<span class="parked" style="left:${(a / 14.4).toFixed(2)}%;width:${((b - a) / 14.4).toFixed(2)}%">${b - a > 120 ? "parked" : ""}</span>`).join("")}
+        ${blocks}
+        <svg viewBox="0 0 1440 72" preserveAspectRatio="none" width="100%" height="72" aria-hidden="true">
+          <path d="${path}" fill="none" stroke="${INK}" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+        </svg>
+      </div></div>`;
+  });
+  rows.push(`<div class="hours"><span style="width:28px;flex:none"></span><div><span>00Z</span><span>06Z</span><span>12Z</span><span>18Z</span><span>24Z</span></div></div>`);
+  el("field").innerHTML = rows.join("");
+  el("field").querySelectorAll(".block").forEach((block) =>
+    block.addEventListener("click", () => {
+      view.picked = Number(block.dataset.index);
+      drawEval();
+    })
+  );
+}
+
+function drawEpisodeList(episodes) {
+  const count = `${episodes.length} ${episodes.length === 1 ? "episode" : "episodes"} on ${dayName(view.day)}`;
+  el("ep-list").innerHTML = `<div class="count">${count}</div>` + episodes.map((e) => `
+    <button type="button" data-index="${e.index}" aria-pressed="${e.index === view.picked}">
+      <span class="dot" style="width:10px;height:10px;background:${CAUSES[e.class].color}"></span>
+      <span class="when">${hhmm(e.start)} to ${hhmm(e.end)}</span>
+      <span class="what">${CAUSES[e.class].label} <span>${e.tractors.join(" ")}</span></span>
+      <span class="conf">${e.confidence.toFixed(2)}</span>
+    </button>`).join("");
+  el("ep-list").querySelectorAll("button").forEach((button) =>
+    button.addEventListener("click", () => {
+      view.picked = Number(button.dataset.index);
+      drawEval();
+    })
+  );
+}
+
+// Icons for each kind of evidence line
+const SIGN_ICONS = {
+  seen: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#0a5640" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Seen, supports the call"><path d="M4 10.5l4 4 8-9"></path></svg>`,
+  nothing_against: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#0a5640" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Nothing against the call"><path d="M4 10.5l4 4 8-9"></path></svg>`,
+  against: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#b3261e" stroke-width="2.4" stroke-linecap="round" role="img" aria-label="Against the call"><path d="M5 5l10 10M15 5L5 15"></path></svg>`,
+  not_seen: `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#878b91" stroke-width="2.4" stroke-linecap="round" role="img" aria-label="Not seen"><path d="M5 10h10"></path></svg>`,
+};
+const SIGN_WORDS = { seen: "Seen", nothing_against: "Nothing against", against: "Against", not_seen: "Not seen" };
+
+function drawDetail(e) {
+  if (!e) {
+    el("detail").innerHTML = `<p class="meta">No episodes on ${dayName(view.day)}${view.showMultipath ? "" : " (multipath hidden)"}.</p>`;
+    return;
+  }
+  const cause = CAUSES[e.class];
+  let tag = "";
+  if (e.status === "hit") tag = `<span class="tag">Matches ${e.label_id}</span>`;
+  else if (e.status === "exempt") tag = `<span class="tag grey">Short dip, not scored</span>`;
+  else if (e.status === "false_alarm") tag = `<span class="tag bad">False alarm${e.label_id ? ` (${e.label_id})` : ""}</span>`;
+  else if (e.status === "eval") tag = `<span class="tag grey">Eval, no label</span>`;
+
+  el("detail").innerHTML = `
+    <div>
+      <p class="meta">${dayName(e.start)}, ${e.tractors.join(", ")}, ${hhmm(e.start)} to ${hhmm(e.end)} UTC (${lengthText(e.start, e.end)})</p>
+      <div class="head">
+        <h3 style="color:${cause.color}">${cause.label}</h3>
+        <span><span class="big">${e.confidence.toFixed(2)}</span> <small>confidence</small></span>
+      </div>
+      ${tag}
+    </div>
+    <p class="why" style="border-left-color:${cause.color}">${escapeHtml(e.meaning.charAt(0).toUpperCase() + e.meaning.slice(1))}.</p>
+    <div class="action-row">
+      <span class="label-small">Action</span>
+      <strong>${cause.action}</strong>
+      <span class="mono" style="font-size:13px;color:${MUTED}">${e.action}</span>
+    </div>
+    <div>
+      <div class="label-small" style="margin-bottom:4px">Evidence</div>
+      <ul class="signs">${e.signs.map((s) => `<li>${SIGN_ICONS[s.state]}<span><strong>${SIGN_WORDS[s.state]}: ${escapeHtml(s.label)}</strong> <span class="detail-text">(${escapeHtml(s.detail)})</span></span></li>`).join("")}</ul>
+      ${e.notes.length ? `<ul class="notes">${e.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>` : ""}
+    </div>
+    <div class="formula">confidence = ${e.formula}</div>`;
+}
+
+// ---------- Section 6 ----------
+
+function drawDeepDive(name) {
+  const dive = data.deep_dives && data.deep_dives[name];
+  if (!dive) {
+    el(`dive-${name}`).innerHTML = `<p class="error">No deep-dive data: run python -m demo.build</p>`;
+    return;
+  }
+  const [start, end] = dive.window;
+  const calls = (data.episodes || []).filter(
+    (e) => e.class !== "MULTIPATH" && e.start < end && e.end > start
+  );
+  const rows = stackRows([
+    { id: "Signal", weight: 3, kind: "signal" },
+    { id: "Off row", weight: 1.6, kind: "xte" },
+    ...calls.map((call) => ({ id: "", weight: 0.5, kind: "call", call })),
+  ], 0.03);
+  const layout = baseLayout(380 + calls.length * 34, [t(start), t(end)]);
+  layout.margin.l = 72;
+  const traces = [];
+
+  for (const row of rows) {
+    if (row.kind === "signal") {
+      layout[row.key] = yAxis(row, { range: [-6, 48], tickvals: [0, 20, 40] });
+      layout.annotations.push(rowTitle(row, "Signal"));
+      for (const [tractor, values] of Object.entries(dive.tractors)) {
+        traces.push({
+          type: "scatter", mode: "lines", x: values.ts.map(t), y: values.signal_weakest_db, yaxis: row.axis,
+          line: { color: TRACTOR_COLORS[tractor], width: tractor === "T1" ? 2 : 1.6 },
+          hovertemplate: `${tractor} %{x|%H:%M:%S}<br>weakest satellite %{y} dB-Hz<extra></extra>`,
+        });
+        // Correction link lost, as ticks under the lines
+        const lost = values.ts.filter((_, j) => values.base_link_lost[j]).map(t);
+        const lane = { T1: -1.5, T2: -3, T3: -4.5 }[tractor];
+        traces.push({
+          type: "scatter", mode: "markers", x: lost, y: lost.map(() => lane), yaxis: row.axis,
+          marker: { symbol: "square", size: 3, color: TRACTOR_COLORS[tractor] },
+          hovertemplate: `${tractor} correction link lost %{x|%H:%M:%S}<extra></extra>`,
+        });
+      }
+    } else if (row.kind === "xte") {
+      layout[row.key] = yAxis(row, { type: "log", range: [-2, Math.log10(30)], dtick: 1 });
+      layout.annotations.push(rowTitle(row, "Off row"));
+      for (const [tractor, values] of Object.entries(dive.tractors)) {
+        traces.push({
+          type: "scatter", mode: "lines", x: values.ts.map(t), y: values.cross_track_error_m, yaxis: row.axis,
+          line: { color: TRACTOR_COLORS[tractor], width: 1.4 },
+          hovertemplate: `${tractor} %{x|%H:%M:%S}<br>off the row %{y} m<extra></extra>`,
+        });
+      }
+      const cut = Math.log10(data.meta.cutoffs.BAD_CROSS_TRACK_ERROR_M);
+      layout.shapes.push({ ...cutoffLine(row, 0), y0: cut, y1: cut });
+    } else {
+      // One bar per call in the window, labeled with its cause and confidence
+      const call = row.call;
+      const color = CAUSES[call.class].color;
+      layout[row.key] = yAxis(row, { range: [0, 1], showticklabels: false });
+      traces.push({
+        type: "bar", orientation: "h", yaxis: row.axis, y: [0.5], base: [t(call.start)],
+        x: [Date.parse(call.end) - Date.parse(call.start)], width: 0.9, marker: { color },
+        hovertext: [hoverLines(call, [`confidence ${call.confidence.toFixed(2)}`])], hoverinfo: "text",
+      });
+      layout.annotations.push({
+        xref: "x", yref: row.axis, x: t(call.start > start ? call.start : start), y: 0.5, xanchor: "left",
+        text: `<b>${CAUSES[call.class].label} on ${call.tractors.join(", ")}, ${call.confidence.toFixed(2)}</b>`,
+        showarrow: false, font: { size: 12, color: PAPER },
+      });
+    }
+  }
+  Plotly.react(`dive-${name}`, traces, layout, PLOT_CONFIG);
+
+  el(`dive-${name}-calls`).innerHTML = calls.map((call) => `
+    <div style="border-top:2px solid ${CAUSES[call.class].color};padding-top:8px">
+      <strong style="color:${CAUSES[call.class].color}">${CAUSES[call.class].label} on ${call.tractors.join(", ")}</strong>
+      <span class="mono" style="font-size:13px;color:${MUTED}"> ${hhmm(call.start)} to ${hhmm(call.end)}</span>
+      <div class="formula">${call.formula}</div>
+      <ul class="notes">${call.signs.map((s) => `<li>${SIGN_WORDS[s.state]}: ${escapeHtml(s.label)}</li>`).join("")}${call.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
+    </div>`).join("");
 }
 
 // ---------- Linked zoom ----------
 
-// Zooming one chart's time axis zooms the others to match
+// Zooming one timeline zooms the other to match
 function linkZoom() {
-  for (const id of CHART_IDS) {
+  for (const id of LINKED) {
     const chart = el(id);
     if (!chart.on || chart.dataset.linked) continue;
     chart.dataset.linked = "yes";
     chart.on("plotly_relayout", (event) => {
       if (syncing) return;
-      let update = null;
-      if (event["xaxis.range[0]"] !== undefined) {
-        update = { "xaxis.range": [event["xaxis.range[0]"], event["xaxis.range[1]"]] };
-      } else if (event["xaxis.range"]) {
-        update = { "xaxis.range": event["xaxis.range"] };
-      } else if (event["xaxis.autorange"]) {
-        resetZoom(id);
-        return;
-      }
-      if (!update) return;
+      let range = null;
+      if (event["xaxis.range[0]"] !== undefined) range = [event["xaxis.range[0]"], event["xaxis.range[1]"]];
+      else if (event["xaxis.range"]) range = event["xaxis.range"];
+      else if (event["xaxis.autorange"]) return resetZoom();
+      if (!range) return;
       syncing = true;
-      Promise.all(
-        CHART_IDS.filter((other) => other !== id && el(other).layout).map((other) => Plotly.relayout(other, update))
-      ).finally(() => (syncing = false));
+      Promise.all(LINKED.filter((other) => other !== id && el(other).layout).map((other) => Plotly.relayout(other, { "xaxis.range": range })))
+        .finally(() => (syncing = false));
     });
   }
 }
 
-// Double-click puts each chart back to its own full window
-function resetZoom(source) {
+// Double-click puts each timeline back to its own full window
+function resetZoom() {
   syncing = true;
-  const ranges = { "dev-chart": data.meta.windows.dev };
-  Promise.all(
-    CHART_IDS.filter((id) => el(id).layout).map((id) =>
-      ranges[id]
-        ? Plotly.relayout(id, { "xaxis.range": ranges[id].map(t) })
-        : Plotly.relayout(id, { "xaxis.autorange": true })
-    )
-  ).finally(() => (syncing = false));
+  const [devStart, devEnd] = data.meta.windows.dev;
+  Promise.all([
+    el("data-chart").layout && Plotly.relayout("data-chart", { "xaxis.autorange": true }),
+    el("dev-chart").layout && Plotly.relayout("dev-chart", { "xaxis.range": [t(devStart), t(devEnd)] }),
+  ]).finally(() => (syncing = false));
 }
 
 // ---------- Nav ----------
 
 function highlightNav() {
-  const links = [...document.querySelectorAll(".sidebar a")];
+  const links = [...document.querySelectorAll(".rail .num")];
   const observer = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
-        links.forEach((link) => link.classList.toggle("active", link.hash === `#${entry.target.id}`));
+        links.forEach((link) => {
+          const on = link.hash === `#${entry.target.id}`;
+          link.classList.toggle("active", on);
+          link.setAttribute("aria-current", on ? "true" : "false");
+        });
       }
     },
     { rootMargin: "-40% 0px -55% 0px" }
@@ -533,16 +888,19 @@ async function drawAll() {
   status.textContent = "Loading…";
   try {
     await loadData();
-    causeLegend("data-legend");
-    causeLegend("dev-legend");
+    drawCauses();
     drawDataChart();
+    drawRules();
     drawDevChart();
     drawScorecard();
+    drawEval();
+    drawDeepDive("clear");
+    drawDeepDive("ambiguous");
     linkZoom();
-    status.textContent = `Data built ${data.meta.built.slice(11, 19)} UTC`;
+    status.textContent = `Built ${data.meta.built.slice(11, 16)}Z`;
   } catch (error) {
     console.error(error);
-    status.innerHTML = `<span class="error">Couldn't load: ${escapeHtml(error.message)}</span>`;
+    status.innerHTML = `<span class="error">Couldn't load</span>`;
   }
 }
 
@@ -553,7 +911,7 @@ async function reload() {
   el("status").textContent = "Rebuilding…";
   try {
     const response = await fetch("rebuild", { method: "POST" });
-    if (!response.ok) throw new Error(`rebuild failed (${response.status}), see the terminal`);
+    if (!response.ok) throw new Error(`rebuild failed (${response.status})`);
     await drawAll();
   } catch (error) {
     el("status").innerHTML = `<span class="error">${escapeHtml(error.message)}</span>`;
@@ -563,5 +921,14 @@ async function reload() {
 }
 
 el("reload").addEventListener("click", reload);
+el("debug-rows").addEventListener("change", (event) => {
+  view.debugRows = event.target.checked;
+  drawDataChart();
+});
+el("show-multipath").addEventListener("change", (event) => {
+  view.showMultipath = event.target.checked;
+  view.picked = null;
+  drawEval();
+});
 highlightNav();
 drawAll();
