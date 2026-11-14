@@ -125,3 +125,5 @@ HEALTHY_MAX_DROP_DB = 3.0
 FLEET_OK_DROP_DB = 2.5
 # Signal flicker (S4) at or above this means a storm. fixed 
 HIGH_FLICKER_S4 = 0.3
+# Causes that stay on one tractor and never join across tractors. fixed (guide)
+ONE_TRACTOR_CAUSES = ["EQUIPMENT_FAULT", "MULTIPATH"]
