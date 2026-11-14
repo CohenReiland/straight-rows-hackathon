@@ -113,3 +113,18 @@ def best_pairs(
         ),
     )
     return dict(best[winner][1])
+
+
+# Pair detections with labels one to one: same-cause pairs first, then any cause.
+def match(detections: list[dict], labels: list[dict]) -> dict[int, int]:
+    # Same-cause pairs
+    all_d = list(range(len(detections)))
+    all_l = list(range(len(labels)))
+    matches = best_pairs(detections, labels, all_d, all_l, True)
+
+    # Any cause, for what is left
+    left_d = [i for i in all_d if i not in matches.values()]
+    left_l = [i for i in all_l if i not in matches]
+    matches.update(best_pairs(detections, labels, left_d, left_l, False))
+
+    return matches
