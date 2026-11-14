@@ -95,3 +95,9 @@ ACTIONS = {
     "EQUIPMENT_FAULT": "SERVICE_MACHINE_OTHERS_CONTINUE",
     "MULTIPATH": "CONTINUE_FALSE_ALARM",
 }
+
+# Segment settings
+# A minute is bad if its weakest satellite is this far below normal. learned
+BAD_WEAKEST_DROP_DB = 13.0
+# A minute is bad if the tractor strays this far off its line. learned
+BAD_CROSS_TRACK_ERROR_M = 0.50
