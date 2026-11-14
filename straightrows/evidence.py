@@ -259,6 +259,66 @@ def jamming_signs(rows: pd.DataFrame, feeds: dict) -> list[dict]:
     ]
 
 
+# Signs for an equipment fault: one tractor goes bad while the others are fine.
+def equipment_fault_signs(rows: pd.DataFrame, feeds: dict) -> list[dict]:
+    # Times, tractors, and nearby interference reports
+    start = rows["start"].min()
+    tractors = sorted(rows["tractor"].unique())
+    reports = nearby_reports(
+        feeds["interference_reports"], start, rows["lat"].mean(), rows["lon"].mean()
+    )
+
+    # A lost correction link and a failing antenna have different signs
+    if rows["base_link_lost"].any():
+        others_lost = rows["fleet_base_link_lost"].any()
+        machine_sign = sign(
+            "for",
+            not others_lost,
+            "correction link from the base station lost on this tractor only",
+            "the other tractors' links "
+            + ("were lost too" if others_lost else "stayed up"),
+        )
+    else:
+        sats_drop = rows["num_sats_drop_max"].max()
+        weakest_drop = rows["signal_weakest_drop_median_db"].max()
+        machine_sign = sign(
+            "for",
+            sats_drop > config.SATS_NORMAL_DROP
+            or weakest_drop >= config.BAD_WEAKEST_DROP_DB,
+            "satellites lost or weakened on this tractor, like a failing antenna",
+            f"up to {sats_drop:.0f} satellites below usual; weakest satellite "
+            f"typically {weakest_drop:.1f} dB below usual, bad is "
+            f"{config.BAD_WEAKEST_DROP_DB:.0f} dB or more",
+        )
+
+    # Other tractors are fine if none was working, or even the worst barely dropped
+    fleet_drop = rows["fleet_worst_signal_mean_drop_db"].mean()
+    if pd.isna(fleet_drop):
+        fleet_text = "no other tractor was working"
+    else:
+        fleet_text = (
+            f"the worst other tractor's average signal was {fleet_drop:.1f} dB below "
+            f"usual, fine is under {config.FLEET_OK_DROP_DB} dB"
+        )
+
+    return [
+        machine_sign,
+        sign("for", len(tractors) == 1, "only one tractor hit", ", ".join(tractors)),
+        sign(
+            "for",
+            pd.isna(fleet_drop) or fleet_drop < config.FLEET_OK_DROP_DB,
+            "other tractors fine at the same time",
+            fleet_text,
+        ),
+        sign(
+            "against",
+            reports,
+            "interference report nearby, which points to jamming instead",
+            describe_reports(reports, start),
+        ),
+    ]
+
+
 # Turn the signs into a confidence between the floor and the cap.
 def confidence(signs: list[dict]) -> float:
     # Count the signs for, the bonus signs seen, and the signs against
