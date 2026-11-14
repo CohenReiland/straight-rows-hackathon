@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 
 from . import config
@@ -30,3 +31,16 @@ def write(detections: list[dict], window: str) -> Path:
 def validate(path: Path) -> bool:
     result = subprocess.run([sys.executable, str(config.VALIDATOR), str(path)])
     return result.returncode == 0
+
+
+# Print the detections.
+def summarize(detections: list[dict]) -> None:
+    # Print the count per cause
+    cause_counts = Counter(detection["class"] for detection in detections)
+    print(f"{len(detections)} detections: {dict(cause_counts)}")
+
+    # Print one line per detection
+    for detection in detections:
+        tractors = ",".join(detection["tractors"])
+        times = f"{detection['start']} to {detection['end'][11:]}"
+        print(f"  {times}  {tractors:8} {detection['class']}")
