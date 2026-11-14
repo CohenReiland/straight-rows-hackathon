@@ -1,6 +1,8 @@
 # Stage 7 helper: check the signs for a detection's cause, score the confidence,
 # and write evidence in clean sentences that read on their own.
 
+import re
+
 import numpy as np
 import pandas as pd
 
@@ -390,6 +392,49 @@ def sign_lines(signs: list[dict]) -> list[str]:
         lines.append(f"{prefix}: {s['label']} ({s['detail']}).")
     return lines
 
+# Notes that explain away a space feed that could mislead. Not points.
+def feed_notes(cause: str, rows: pd.DataFrame, feeds: dict) -> list[str]:
+    start = rows["start"].min()
+    end = rows["end"].max()
+    notes = []
+
+    # A high storm level during jamming doesn't mean a storm hit the field
+    storm_kp = storm_readings(feeds["storm_kp"], "storm_kp", start, end).max()
+    if cause == "JAMMING" and storm_kp >= config.STORM_KP:
+        if (rows["kind"] == "step").any():
+            reason = (
+                "the signal dropped further on top of the storm, on every tractor "
+                "at once, which a storm alone does not do"
+            )
+        else:
+            reason = "signal flicker (S4) stayed low"
+        notes.append(
+            f"Storm level (Kp) reached {storm_kp:.1f}, but a high storm level "
+            f"alone doesn't mean a space storm caused this: {reason}."
+        )
+
+    # A routine advisory takes out one satellite, which can't explain an episode
+    routine = feeds["advisories"][feeds["advisories"]["type"] == "ROUTINE"]
+    for advisory in routine.to_dict("records"):
+        # The outage hours are only in the text, like "unusable 0800-0930Z"
+        hours = re.search(r"(\d{2})(\d{2})-(\d{2})(\d{2})Z", advisory["text"])
+        if not hours:
+            continue
+        day = advisory["issued"].floor("D")
+        h1, m1, h2, m2 = (int(part) for part in hours.groups())
+        outage_start = day + pd.Timedelta(hours=h1, minutes=m1)
+        outage_end = day + pd.Timedelta(hours=h2, minutes=m2)
+        if outage_start < end and outage_end > start:
+            notes.append(
+                f"Advisory {advisory['advisory_id']}: satellite {advisory['svn']} "
+                f"was out for maintenance {outage_start:%H:%M} to "
+                f"{outage_end:%H:%M} UTC. One satellite out on every tractor "
+                "doesn't explain this."
+            )
+
+    return notes
+
+
 # What each cause means, in plain words, for the summary line
 CAUSE_MEANING = {
     "SPACE_WEATHER": "a space storm disturbing the satellite signals",
@@ -444,4 +489,9 @@ def explain(
         f"({length}): {CAUSE_MEANING[cause]}.",
         f"Confidence {score:.2f}: {', '.join(counts)}.",
     ]
-    return lines + sign_lines(signs), score
+    lines += sign_lines(signs)
+
+    # Multipath stays short, so it gets no feed notes
+    if cause != "MULTIPATH":
+        lines += feed_notes(cause, rows, feeds)
+    return lines, score
