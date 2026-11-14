@@ -20,7 +20,7 @@ def measure(
     ]
 
     # Get the signal flicker readings near the episode
-    lookback = pd.Timedelta(minutes=config.FLICKER_LOOKBACK_MIN)
+    lookback = pd.Timedelta(minutes=config.FLICKER_LOOKBACK_MIN_S4)
     nearby_flicker = signal_flicker[
         (signal_flicker["ts"] >= candidate["start"] - lookback)
         & (signal_flicker["ts"] < candidate["end"])
@@ -58,3 +58,24 @@ def measure(
         ].mean(),
         "signal_flicker_s4_max": nearby_flicker["signal_flicker_s4"].max(),
     }
+
+
+# Get the average signal's drop below normal each second, from a bit before the episode.
+def second_drops(
+    candidate: dict, episode_minutes: pd.DataFrame, telemetry: pd.DataFrame
+) -> list[float]:
+    # Get the seconds, with a few minutes before the start
+    lead_in = pd.Timedelta(minutes=config.COLLAPSE_LEAD_IN_MIN)
+    seconds = telemetry[
+        (telemetry["tractor_id"] == candidate["tractor"])
+        & (telemetry["ts"] >= candidate["start"] - lead_in)
+        & (telemetry["ts"] < candidate["end"])
+    ]
+
+    # Drop below this tractor's normal
+    normal = episode_minutes["signal_mean_normal_db"].iloc[0]
+    drops = normal - seconds["signal_mean_db"]
+
+    # Smooth out the noise (counts rows, so it relies on one row per second)
+    smooth = drops.rolling(config.COLLAPSE_SMOOTH_S, center=True, min_periods=1)
+    return smooth.median().tolist()

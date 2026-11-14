@@ -116,4 +116,8 @@ MAX_GAP_MIN = 3
 
 # Cause test settings
 # Look this far before an episode for signal flicker (S4) readings. fixed
-FLICKER_LOOKBACK_MIN = 15
+FLICKER_LOOKBACK_MIN_S4 = 15
+# Start the collapse check this many minutes before the episode. learned
+COLLAPSE_LEAD_IN_MIN = 5
+# Smooth each second's signal drop over this many seconds. learned
+COLLAPSE_SMOOTH_S = 15
