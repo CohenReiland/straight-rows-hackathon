@@ -31,3 +31,13 @@ def time_iou(a: dict, b: dict) -> float:
 
     # Shared time divided by total time
     return max(overlap, 0) / union if union > 0 else 0.0
+
+
+# How much two tractor lists overlap, from 0 to 1.
+def tractor_iou(a: dict, b: dict) -> float:
+    # Make the tractor sets
+    a_set, b_set = set(a["tractors"]), set(b["tractors"])
+
+    # Shared tractors divided by all tractors (0 if both lists are empty)
+    union = a_set | b_set
+    return len(a_set & b_set) / len(union) if union else 0.0
