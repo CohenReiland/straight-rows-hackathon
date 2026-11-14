@@ -4,6 +4,7 @@
 # python -m demo.build
 
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -13,6 +14,23 @@ from straightrows import s1_load, s2_mask, s3_features, s4_segment
 
 # Where the page's data goes
 OUT = Path(__file__).resolve().parent / "data"
+
+# The deep-dive windows: one clear call and one ambiguous one
+DEEP_DIVES = {
+    "clear": ("2026-05-06T01:45Z", "2026-05-06T03:15Z"),
+    "ambiguous": ("2026-05-06T17:45Z", "2026-05-06T20:45Z"),
+}
+
+# Seconds per point in the deep-dive charts
+DEEP_DIVE_STEP_S = 10
+
+# How each evidence line starts, and what kind of line it is
+SIGN_PREFIXES = {
+    "Seen": "seen",
+    "Not seen": "not_seen",
+    "Against": "against",
+    "Nothing against": "nothing_against",
+}
 
 
 # A time as ISO 8601 UTC text, like submission.json.
@@ -40,13 +58,14 @@ def columns(table: pd.DataFrame, time_columns: list[str]) -> dict:
 
 
 # One row per tractor per minute, one list per signal.
-def build_minutes() -> dict:
+def build_minutes(telemetry: pd.DataFrame) -> dict:
     # Run the Prepare stages, like run.py
-    telemetry = s2_mask.add_working(s1_load.load_telemetry())
     minutes = s3_features.minute_features(telemetry, s1_load.load_labels())
 
-    # Mark the minutes stage 4 calls bad, for debugging
+    # Mark the minutes stage 4 calls bad, and the working minutes far off the line
     minutes["bad"] = s4_segment.is_signal_bad(minutes)
+    off_line = minutes["cross_track_error_max_m"] > config.BAD_CROSS_TRACK_ERROR_M
+    minutes["off_row"] = off_line & minutes["working"]
 
     # Keep only what the charts draw, rounded to keep the file small
     keep = minutes[
@@ -61,6 +80,7 @@ def build_minutes() -> dict:
             "base_link_lost",
             "cross_track_error_max_m",
             "bad",
+            "off_row",
         ]
     ].round({"signal_mean_db": 2, "signal_weakest_db": 2, "cross_track_error_max_m": 3})
 
@@ -154,6 +174,131 @@ def match_report(detections: list[dict], labels: list[dict]) -> dict:
     }
 
 
+# Split a detection's evidence into its summary, confidence math, signs, and notes.
+def parse_evidence(detection: dict) -> dict:
+    lines = detection["evidence"]
+
+    # The summary line ends with what the cause means
+    meaning = lines[0].split("): ", 1)[-1].rstrip(".")
+
+    # The confidence line gives the counts
+    counts = {"seen": 0, "of": 0, "bonus_seen": 0, "bonus_of": 0, "against": 0}
+    found = re.search(r"(\d+) of (\d+) signs seen", lines[1])
+    if found:
+        counts["seen"], counts["of"] = int(found[1]), int(found[2])
+    found = re.search(r"(\d+) of (\d+) bonus signs seen", lines[1])
+    if found:
+        counts["bonus_seen"], counts["bonus_of"] = int(found[1]), int(found[2])
+    found = re.search(r"(\d+) against", lines[1])
+    if found:
+        counts["against"] = int(found[1])
+
+    # Each sign line is "<prefix>: <label> (<detail>)."; anything else is a note
+    signs = []
+    notes = []
+    for line in lines[2:]:
+        prefix, _, rest = line.partition(": ")
+        if prefix not in SIGN_PREFIXES:
+            notes.append(line)
+            continue
+        label, _, detail = rest.rstrip(".").partition(" (")
+        signs.append(
+            {"state": SIGN_PREFIXES[prefix], "label": label, "detail": detail[:-1]}
+        )
+
+    return {
+        "meaning": meaning,
+        "signs": signs,
+        "notes": notes,
+        "formula": confidence_formula(counts, detection["confidence"]),
+    }
+
+
+# The confidence math written out, with the numbers from config.
+def confidence_formula(counts: dict, confidence: float) -> str:
+    if not counts["of"]:
+        return ""
+    spread = config.CONFIDENCE_SIGNS_CAP - config.CONFIDENCE_FLOOR
+    parts = [
+        f"{config.CONFIDENCE_FLOOR:.2f}",
+        f"+ {spread:.2f} × {counts['seen']}/{counts['of']}",
+    ]
+    if counts["bonus_of"]:
+        parts.append(f"+ {config.CONFIDENCE_BONUS:.2f} × {counts['bonus_seen']}")
+    if counts["against"]:
+        parts.append(f"− {config.CONFIDENCE_PENALTY:.2f} × {counts['against']}")
+    return " ".join(parts) + f" = {confidence:.2f}"
+
+
+# Every dev and eval detection with its status and parsed evidence, for section 5.
+def build_episodes(matches: dict | None, detections: dict) -> list[dict]:
+    # Dev detections carry their hit / false alarm / free status when scored
+    if matches:
+        dev = matches["detections"]
+    else:
+        dev = [{**d, "status": "dev", "label_id": None} for d in detections["dev"]]
+    evals = [{**d, "status": "eval", "label_id": None} for d in detections["eval"]]
+
+    # Add the parsed evidence to each one
+    episodes = []
+    for detection in dev + evals:
+        episodes.append({**detection, **parse_evidence(detection)})
+    return episodes
+
+
+# Per-second data around each deep-dive window, thinned to one point per step.
+def build_deep_dives(telemetry: pd.DataFrame) -> dict:
+    result = {}
+    for name, (start, end) in DEEP_DIVES.items():
+        start, end = pd.Timestamp(start), pd.Timestamp(end)
+        inside = telemetry[(telemetry["ts"] >= start) & (telemetry["ts"] < end)]
+
+        # One block per tractor: the worst value in each step
+        tractors = {}
+        for tractor, rows in inside.groupby("tractor_id"):
+            steps = rows.set_index("ts").resample(f"{DEEP_DIVE_STEP_S}s")
+            table = pd.DataFrame(
+                {
+                    "signal_weakest_db": steps["signal_weakest_db"].min(),
+                    "cross_track_error_m": steps["cross_track_error_m"].max(),
+                    "base_link_lost": steps["base_link_ok"].min() == 0,
+                }
+            ).reset_index()
+            table = table.round({"signal_weakest_db": 1, "cross_track_error_m": 2})
+            tractors[tractor] = columns(table, ["ts"])
+        result[name] = {
+            "window": [format_time(start), format_time(end)],
+            "tractors": tractors,
+        }
+    return result
+
+
+# One plain sentence per cause test, with the numbers from config.
+def cause_tests() -> dict:
+    short = config.SHORT_EPISODE_MIN
+    flicker = config.HIGH_FLICKER_S4
+    return {
+        "SPACE_WEATHER": (
+            f"Several tractors drop together and signal flicker (S4) "
+            f"reaches {flicker} or more."
+        ),
+        "JAMMING": (
+            f"Several tractors drop together while S4 stays under {flicker}, "
+            f"or every tractor steps down at once during a storm."
+        ),
+        "SPOOFING": (
+            f"More than {config.BAD_CROSS_TRACK_ERROR_M} m off the line while the "
+            f"signal looks healthy and the base link is fine, or a slow drift."
+        ),
+        "EQUIPMENT_FAULT": (
+            f"One tractor drops while the others stay within "
+            f"{config.FLEET_OK_DROP_DB} dB of normal, or its correction link is "
+            f"lost for more than {short} min."
+        ),
+        "MULTIPATH": f"A short dip ({short} min or less) on one tractor.",
+    }
+
+
 # Window times, causes, actions, and the cutoff lines, so the page doesn't repeat config.
 def build_meta() -> dict:
     return {
@@ -169,6 +314,7 @@ def build_meta() -> dict:
             "STORM_FIELD_DROP_NT": config.STORM_FIELD_DROP_NT,
             "HIGH_FLICKER_S4": config.HIGH_FLICKER_S4,
         },
+        "tests": cause_tests(),
         "built": format_time(pd.Timestamp.now(tz="UTC")),
     }
 
@@ -184,9 +330,11 @@ def score_times(label: dict) -> dict:
 
 # Write every data file.
 def main() -> None:
+    telemetry = s2_mask.add_working(s1_load.load_telemetry())
     write_json("meta.json", build_meta())
-    write_json("minutes.json", build_minutes())
+    write_json("minutes.json", build_minutes(telemetry))
     write_json("space_feeds.json", build_space_feeds())
+    write_json("deep_dives.json", build_deep_dives(telemetry))
 
     labels = json.loads(config.LABELS.read_text(encoding="utf8"))["episodes"]
     write_json("labels.json", [as_text(score_times(label)) for label in labels])
@@ -194,11 +342,12 @@ def main() -> None:
     detections = {
         window: read_detections(path) for window, path in config.OUTPUT.items()
     }
-    write_json("detections.json", detections)
 
     # Dev matching needs dev predictions; skip it if they're missing
-    if config.OUTPUT["dev"].exists():
-        write_json("matches.json", build_matches())
+    matches = build_matches() if config.OUTPUT["dev"].exists() else None
+    if matches:
+        write_json("matches.json", matches)
+    write_json("episodes.json", build_episodes(matches, detections))
 
     # Copy the thresholds if a run has written them
     if config.THRESHOLDS.exists():
