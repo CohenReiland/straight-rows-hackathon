@@ -2219,7 +2219,7 @@
       ]
     },
     {
-      "start": "2026-05-06T16:32:00Z",
+      "start": "2026-05-06T16:30:00Z",
       "end": "2026-05-06T17:12:00Z",
       "tractors": [
         "T1"
@@ -2228,7 +2228,7 @@
       "action": "HALT_CROSSCHECK_AND_REPORT",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T1 from 16:32 to 17:12; the SPOOFING test passed."
+        "Bad minutes on T1 from 16:30 to 17:12; the SPOOFING test passed."
       ]
     },
     {
@@ -3651,7 +3651,7 @@
       ]
     },
     {
-      "start": "2026-05-06T21:51:00Z",
+      "start": "2026-05-06T21:49:00Z",
       "end": "2026-05-06T22:24:00Z",
       "tractors": [
         "T3"
@@ -3660,7 +3660,7 @@
       "action": "HALT_CROSSCHECK_AND_REPORT",
       "confidence": 0.5,
       "evidence": [
-        "Bad minutes on T3 from 21:51 to 22:24; the SPOOFING test passed."
+        "Bad minutes on T3 from 21:49 to 22:24; the SPOOFING test passed."
       ]
     },
     {

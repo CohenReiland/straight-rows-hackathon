@@ -134,6 +134,8 @@ DRIFT_MEDIAN_M = 1.0
 DRIFT_SPREAD_M = 0.3
 # Drifting blocks this many blocks apart or closer join into one drift. fixed
 DRIFT_MAX_GAP_BLOCKS = 1
+# Walk a drift's start back while each minute's median is this far above the last
+DRIFT_RISE_M = 0.05
 # Minutes before each minute used for its own level (median average drop). fixed
 STEP_LOOKBACK_MIN = 30
 # A step is the average drop rising this far above that level. fixed

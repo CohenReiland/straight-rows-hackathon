@@ -115,6 +115,16 @@ def find_dips(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
     return table
 
 
+# Walk a drift's start back while the tractor was still climbing off the line.
+def climb_start(rise: pd.Series, start: pd.Timestamp) -> pd.Timestamp:
+    one_minute = pd.Timedelta(minutes=1)
+    earlier = start
+    while rise.get(earlier, 0) >= config.DRIFT_RISE_M:
+        start = earlier
+        earlier -= one_minute
+    return start
+
+
 # Find smooth drifts off the line, each its own candidate.
 def find_drifts(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
     # Set up the window and the block size
@@ -128,8 +138,9 @@ def find_drifts(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
     for tractor, seconds in working.groupby("tractor_id"):
         line_error = seconds.set_index("ts")["cross_track_error_m"]
 
-        # Median and spread of each block
+        # Median and spread of each block, and the rise of each minute's median
         blocks = line_error.resample(block).agg(["median", "std"])
+        rise = line_error.resample("1min").median().diff()
 
         # A block drifts if it is far off the line but steady, unlike noise
         drifting = blocks[
@@ -143,6 +154,7 @@ def find_drifts(telemetry: pd.DataFrame, window: str) -> pd.DataFrame:
             start = run.iloc[0]
             if window_start <= start < window_end:
                 end = run.iloc[-1] + block
+                start = climb_start(rise, start)
                 drifts.append({"tractor": tractor, "start": start, "end": end})
 
     # Make the table and label the kind
