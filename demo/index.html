@@ -24,12 +24,12 @@
           </svg>
           <span class="tip">Straight Rows</span>
         </a>
-        <a class="num" href="#problem">1<span class="tip">The problem</span></a>
-        <a class="num" href="#data">2<span class="tip">The data</span></a>
+        <a class="num" href="#problem">1<span class="tip">The Problem</span></a>
+        <a class="num" href="#data">2<span class="tip">The Data</span></a>
         <a class="num" href="#how">3<span class="tip">Rules</span></a>
-        <a class="num" href="#dev">4<span class="tip">Dev check</span></a>
-        <a class="num" href="#eval">5<span class="tip">Eval results</span></a>
-        <a class="num" href="#deep">6<span class="tip">Deep dive</span></a>
+        <a class="num" href="#dev">4<span class="tip">Development Check</span></a>
+        <a class="num" href="#eval">5<span class="tip">Evaluation Results</span></a>
+        <a class="num" href="#deep">6<span class="tip">Deep Dive</span></a>
         <a class="num" href="#limits">7<span class="tip">Limits</span></a>
         <span class="spacer"></span>
         <button id="reload" type="button" aria-label="Reload data">
@@ -59,16 +59,16 @@
 
           <!-- 2 · The data -->
           <section id="data">
-            <h2><span class="n">2</span>The data at a glance</h2>
+            <h2><span class="n">2</span>The Data at a Glance</h2>
             <p class="lead">
               This is 72 hours of telemetry from the three tractors, lined up with the space-weather
               feeds on one time axis. Drag to zoom, double-click to zoom back out.
             </p>
+            <p class="note">
+              Each line is one tractor's weakest satellite signal (dB-Hz), one point per minute.
+            </p>
             <div class="chart-tools">
-              <span>
-                The black line is each tractor's weakest satellite signal (dB-Hz), one point per
-                minute.
-              </span>
+              <div id="data-days" class="days" role="group" aria-label="Days shown"></div>
               <label class="toggle">
                 <input type="checkbox" id="debug-rows" />
                 <span>Show debug rows</span>
@@ -86,9 +86,9 @@
               each episode.
             </p>
             <div id="stages" class="stages"></div>
-            <h3>The five cause tests</h3>
+            <h3>The Five Cause Tests</h3>
             <div id="tests" class="table-box"></div>
-            <h3>Learned thresholds</h3>
+            <h3>Learned Thresholds</h3>
             <p class="note">
               Each tractor's normal comes from its own working minutes. A minute is bad when its
               weakest satellite falls far enough below that normal.
@@ -96,12 +96,12 @@
             <div id="thresholds" class="table-box"></div>
           </section>
 
-          <!-- 4 · Dev check -->
+          <!-- 4 · Development check -->
           <section id="dev">
-            <h2><span class="n">4</span>Dev check</h2>
+            <h2><span class="n">4</span>Development Check</h2>
             <p class="lead">
-              These are the labeled examples from the two dev days, with my calls right under them.
-              Zooming here also zooms the chart in section 2.
+              These are the labeled examples from the two development days, with my calls right
+              under them.
             </p>
             <div id="dev-chart" class="chart"></div>
             <div id="dev-legend" class="legend"></div>
@@ -109,19 +109,19 @@
             <div id="cause-score" class="table-box"></div>
             <p class="overfit">
               <strong>Did it overfit?</strong> The cutoffs come from each tractor's own normal, not
-              hardcoded per episode, and the eval window was never used to tune a number. A perfect
-              dev score is still a warning: see <a href="#limits">Limits</a>.
+              hardcoded per episode. <a href="#limits">Limits</a>
             </p>
-            <h3>Each label</h3>
+            <h3>Each Label</h3>
             <div id="label-table" class="table-box"></div>
+            <button type="button" id="labels-more" class="pill table-more" aria-controls="label-table"></button>
           </section>
 
-          <!-- 5 · Eval results -->
+          <!-- 5 · Evaluation results -->
           <section id="eval">
-            <h2><span class="n">5</span>Eval results</h2>
+            <h2><span class="n">5</span>Evaluation Results</h2>
             <p class="lead">
               Pick an episode to see the call, its confidence, and the evidence behind it. May 6 is
-              the scored day, and the two dev days are here to compare.
+              the scored day, and the two development days are here to compare.
             </p>
             <div class="day-bar">
               <div id="days" class="days" role="group" aria-label="Day"></div>
@@ -142,11 +142,10 @@
 
           <!-- 6 · Deep dive -->
           <section id="deep">
-            <h2><span class="n">6</span>Deep dive</h2>
+            <h2><span class="n">6</span>Deep Dive</h2>
             <p class="lead">
-              Two windows from the eval day, zoomed to 10-second steps: one clear call and one
-              ambiguous one. Signal is the weakest satellite (dB-Hz) and Off row is the distance off
-              the row (m).
+              This is one example from the evaluation day, zoomed to 10-second steps. Signal is the
+              weakest satellite (dB-Hz) and Off row is the distance off the row (m).
             </p>
             <div class="legend">
               <span><span class="swatch line" style="background: var(--ink)"></span>T1</span>
@@ -157,99 +156,64 @@
             </div>
             <div class="dive">
               <div class="dive-head" style="border-color: var(--jam)">
-                <h3>The clear call: jamming at 02:12</h3>
+                <h3>Jamming at 02:12</h3>
                 <p>
                   All three tractors lose their signal within the same minute while signal flicker
                   stays flat, and an interference report arrives from 1.8 km away in the middle of
-                  it.
+                  it. Just before it, T1 alone has an equipment fault.
                 </p>
               </div>
               <div id="dive-clear" class="chart"></div>
               <div id="dive-clear-calls" class="dive-calls"></div>
             </div>
-            <div class="dive">
-              <div class="dive-head" style="border-color: var(--eq)">
-                <h3>The ambiguous one: 18:00 to 20:30</h3>
-                <p>
-                  Jamming hits all three tractors with no interference report, so its confidence
-                  stops at 0.85. The drop follows position: T3, furthest west, loses about 14 dB and
-                  T2, furthest east, about 6 dB. 48 minutes later T2 alone loses its correction link:
-                  a different cause and a different action on the same tractor.
-                </p>
-              </div>
-              <div id="dive-ambiguous" class="chart"></div>
-              <div id="dive-ambiguous-calls" class="dive-calls"></div>
-            </div>
           </section>
 
           <!-- 7 · Limits -->
           <section id="limits">
-            <h2><span class="n">7</span>Limits and ways to improve</h2>
-            <p class="lead">These are the cases the rules get wrong and the data that would fix them.</p>
+            <h2><span class="n">7</span>Limits and Improvements</h2>
+            <p class="lead">These are the limits of this project and ways to improve it.</p>
             <div class="columns">
               <div>
-                <h3>Where it gets it wrong</h3>
-                <h4>Multipath</h4>
+                <h3>Where It Gets It Wrong</h3>
                 <ul>
                   <li>
-                    Every short dip is reported as multipath: 305 on eval, most at the row ends with
-                    all three tractors dipping together.
+                    Every short dip is reported as multipath. There were 305 on the evaluation day,
+                    and most were at the row ends with all three tractors dipping together.
                   </li>
                   <li>
                     Without per-satellite data we can't tell row-end shading from true multipath.
                   </li>
                   <li>
-                    The row-end dips forced the bad-minute cutoff up to 13 dB, so a long but shallow
-                    episode could slip under it.
-                  </li>
-                </ul>
-                <h4>Overfitting</h4>
-                <ul>
-                  <li>Dev scores 40/40 on only 12 labels.</li>
-                  <li>
-                    The cutoffs come from each tractor's own normal and from calm dev minutes, never
-                    from eval.
+                    The cutoffs come from each tractor's own normal and from calm development
+                    minutes, never from evaluation.
                   </li>
                   <li>
-                    Every eval call matches a pattern dev already had, so a truly new kind of event
-                    would probably be missed or mislabeled.
+                    Using development data we can fit our solution to work perfectly on that data,
+                    but real life data is messy.
                   </li>
-                </ul>
-                <h4>Two causes at once</h4>
-                <ul>
-                  <li>A jam during a storm is only found as a further step down on every tractor.</li>
-                  <li>Overlapping calls lose 0.15 confidence each.</li>
-                  <li>When several tests pass, the first in a fixed order wins.</li>
                   <li>
-                    Not every combination of two or three causes has been handled or tested: the
+                    Not every combination of two or three causes has been handled or tested. The
                     labels only show a few of them.
                   </li>
-                </ul>
-                <h4>Other</h4>
-                <ul>
                   <li>Jammer on one tractor → equipment fault</li>
                   <li>Base-station outage → three equipment faults</li>
                   <li>Signal fault during a storm → space weather</li>
-                  <li>No interference report → jamming confidence stops at 0.85</li>
-                  <li>A storm without a magnetic field drop scores lower (eval storm: 0.84)</li>
+                  <li>
+                    This runs on recorded data after the fact. In a real scenario we would want it
+                    to run in real time.
+                  </li>
                 </ul>
               </div>
               <div>
-                <h3>Ways to improve</h3>
+                <h3>Ways to Improve</h3>
                 <ul>
                   <li><strong>AGC and noise floor</strong>: tells jamming from an antenna fault</li>
                   <li>
                     <strong>Per-satellite signal with satellite IDs</strong>: tells row-end shading
                     from multipath
                   </li>
-                  <li><strong>Wheel odometry or an IMU</strong>: a cross-check against spoofing</li>
-                  <li><strong>Base-station logs</strong>: confirms correction-link faults</li>
                   <li>
                     <strong>More labeled examples</strong> of multipath and of overlapping causes
-                  </li>
-                  <li>
-                    <strong>A jammer footprint sign</strong>: the drop grows toward one side of the
-                    fleet, as at 18:30 on the eval day
                   </li>
                 </ul>
               </div>

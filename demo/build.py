@@ -15,10 +15,9 @@ from straightrows import s1_load, s2_mask, s3_features, s4_segment
 # Where the page's data goes
 OUT = Path(__file__).resolve().parent / "data"
 
-# The deep-dive windows: one clear call and one ambiguous one
+# The deep-dive window: one example from the scored day
 DEEP_DIVES = {
     "clear": ("2026-05-06T01:45Z", "2026-05-06T03:15Z"),
-    "ambiguous": ("2026-05-06T17:45Z", "2026-05-06T20:45Z"),
 }
 
 # Seconds per point in the deep-dive charts
