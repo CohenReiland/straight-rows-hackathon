@@ -29,8 +29,8 @@ TELEMETRY_FIELDS = {
 # Where each space feed is: (file, list key inside it, columns that are times)
 SPACE_FEED_FILES = {
     "storm_kp": ("sgi_indices.json", "kp", ["ts"]),
-    "dst": ("sgi_indices.json", "dst", ["ts"]),
-    "s4": ("scintillation_series.json", "series", ["ts"]),
+    "storm_field_drop": ("sgi_indices.json", "dst", ["ts"]),
+    "signal_flicker_s4": ("scintillation_series.json", "series", ["ts"]),
     "advisories": ("constellation_advisories.json", "advisories", ["issued"]),
     "interference_reports": ("rfi_reports.json", "reports", ["received"]),
 }
@@ -38,8 +38,8 @@ SPACE_FEED_FILES = {
 # Space feed field names, as {our column: field name in the file}.
 SPACE_FEED_FIELDS = {
     "storm_kp": {"ts": "ts", "storm_kp": "kp"},
-    "dst": {"ts": "ts", "dst_nt": "dst_nT"},
-    "s4": {"ts": "ts", "s4": "s4"},
+    "storm_field_drop": {"ts": "ts", "storm_field_drop_nt": "dst_nT"},
+    "signal_flicker_s4": {"ts": "ts", "signal_flicker_s4": "s4"},
     "advisories": {
         "advisory_id": "id",
         "issued": "ts",
