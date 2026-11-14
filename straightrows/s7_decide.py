@@ -30,6 +30,26 @@ def pick_cause(candidate: dict) -> str:
     return "EQUIPMENT_FAULT"
 
 
+# Drop multipath dips on a tractor while it is being jammed. Those are the
+# jammer pulsing, not signals bouncing.
+def drop_jammed_dips(tested: pd.DataFrame) -> pd.DataFrame:
+    jammed = tested[tested["cause"] == "JAMMING"]
+    keep = []
+    for candidate in tested.to_dict("records"):
+        # Keep everything that isn't multipath
+        if candidate["cause"] != "MULTIPATH":
+            keep.append(True)
+            continue
+
+        # Drop it if a jamming candidate on the same tractor overlaps it
+        same_tractor = jammed[jammed["tractor"] == candidate["tractor"]]
+        overlaps = (same_tractor["start"] < candidate["end"]) & (
+            same_tractor["end"] > candidate["start"]
+        )
+        keep.append(not overlaps.any())
+    return tested[keep].copy()
+
+
 # Turn tested candidates into detections.
 def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
     # Stop if there is nothing to report
@@ -39,6 +59,7 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
     # Pick a cause for each candidate
     causes = [pick_cause(candidate) for candidate in tested.to_dict("records")]
     tested = tested.assign(cause=causes).sort_values("start")
+    tested = drop_jammed_dips(tested)
 
     # One-machine causes stay on their own tractor, the others can share tractors
     shared_by = []
