@@ -392,6 +392,7 @@ def sign_lines(signs: list[dict]) -> list[str]:
         lines.append(f"{prefix}: {s['label']} ({s['detail']}).")
     return lines
 
+
 # Notes that explain away a space feed that could mislead. Not points.
 def feed_notes(cause: str, rows: pd.DataFrame, feeds: dict) -> list[str]:
     start = rows["start"].min()
@@ -447,7 +448,11 @@ CAUSE_MEANING = {
 
 # Check the signs for a detection's cause. Return its evidence and confidence.
 def explain(
-    cause: str, rows: pd.DataFrame, tested: pd.DataFrame, feeds: dict
+    cause: str,
+    rows: pd.DataFrame,
+    tested: pd.DataFrame,
+    feeds: dict,
+    overlapping: bool = False,
 ) -> tuple[list[str], float]:
     # Get the signs for this cause
     if cause == "SPACE_WEATHER":
@@ -460,6 +465,18 @@ def explain(
         signs = equipment_fault_signs(rows, feeds)
     else:
         signs = multipath_signs(rows, tested)
+
+    # Another cause at the same time makes the signs harder to tell apart
+    if overlapping:
+        signs.append(
+            sign(
+                "against",
+                True,
+                "another cause on the same tractors at the same time, which makes "
+                "the signs harder to tell apart",
+                "named below",
+            )
+        )
     score = confidence(signs)
 
     # Times, tractors, and length, in seconds when short

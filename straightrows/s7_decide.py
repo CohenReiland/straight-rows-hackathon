@@ -78,24 +78,26 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
     detections = []
     groups = tested.groupby(["cause", "shared_by", "part"])
     for (cause, _, _), same_cause in groups:
-        start = same_cause["start"].min()
-        end = same_cause["end"].max()
-        tractors = sorted(same_cause["tractor"].unique())
-
-        # Check the signs and write the evidence
-        lines, score = evidence.explain(cause, same_cause, tested, feeds)
-
         detections.append(
             {
-                "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "end": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "tractors": tractors,
+                "start": same_cause["start"].min().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "end": same_cause["end"].max().strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "tractors": sorted(same_cause["tractor"].unique()),
                 "class": cause,
                 "action": config.ACTIONS[cause],
-                "confidence": score,
-                "evidence": lines,
+                "rows": same_cause,
             }
         )
+
+    # Check the signs and write the evidence, once every detection's span is known
+    for detection in detections:
+        overlapping = any(overlaps(detection, other) for other in detections)
+        rows = detection.pop("rows")
+        lines, score = evidence.explain(
+            detection["class"], rows, tested, feeds, overlapping
+        )
+        detection["confidence"] = score
+        detection["evidence"] = lines
 
     # Point each detection at the others that overlap it
     add_overlap_notes(detections)
@@ -106,18 +108,21 @@ def make_detections(tested: pd.DataFrame, feeds: dict) -> list[dict]:
     return detections
 
 
-# Add a line naming each other detection that overlaps in time and shares a
-# tractor. Multipath is left out both ways, since its dips are many and short.
+# True if two different detections overlap in time and share a tractor.
+# Multipath is left out both ways, since its dips are many and short.
+def overlaps(detection: dict, other: dict) -> bool:
+    if other is detection or "MULTIPATH" in (detection["class"], other["class"]):
+        return False
+    if other["start"] >= detection["end"] or other["end"] <= detection["start"]:
+        return False
+    return bool(set(other["tractors"]) & set(detection["tractors"]))
+
+
+# Add a line naming each other detection that overlaps this one.
 def add_overlap_notes(detections: list[dict]) -> None:
-    main = [d for d in detections if d["class"] != "MULTIPATH"]
-    for detection in main:
-        for other in main:
-            # Skip itself, and detections at other times or on other tractors
-            if other is detection:
-                continue
-            if other["start"] >= detection["end"] or other["end"] <= detection["start"]:
-                continue
-            if not set(other["tractors"]) & set(detection["tractors"]):
+    for detection in detections:
+        for other in detections:
+            if not overlaps(detection, other):
                 continue
 
             # Name the other cause
