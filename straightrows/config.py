@@ -14,6 +14,10 @@ LABELS = DATA / "labels" / "train_episodes.json"
 # Where run.py writes each window's detections
 OUTPUT = {"dev": ROOT / "dev_predictions.json", "eval": ROOT / "submission.json"}
 
+# Who is submitting: GitHub username only, never email or student ID. fixed
+PARTICIPANT = {"github_handle": "CohenReiland"}
+REPOSITORY_URL = "https://github.com/CohenReiland/straight-rows-hackathon"
+
 # Time windows, start included and end left out. fixed (README)
 WINDOWS = {
     "dev": (pd.Timestamp("2026-05-04T00:00Z"), pd.Timestamp("2026-05-06T00:00Z")),
