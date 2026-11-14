@@ -2,12 +2,23 @@
 
 from pathlib import Path
 
+import pandas as pd
+
 # File locations
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 TELEMETRY = DATA / "farm" / "tractor_telemetry.csv.gz"
 SPACE_FEEDS = DATA / "sda"
 LABELS = DATA / "labels" / "train_episodes.json"
+
+# Where run.py writes each window's detections
+OUTPUT = {"dev": ROOT / "dev_predictions.json", "eval": ROOT / "submission.json"}
+
+# Time windows, start included and end left out. fixed (README)
+WINDOWS = {
+    "dev": (pd.Timestamp("2026-05-04T00:00Z"), pd.Timestamp("2026-05-06T00:00Z")),
+    "eval": (pd.Timestamp("2026-05-06T00:00Z"), pd.Timestamp("2026-05-07T00:00Z")),
+}
 
 # Rows the telemetry has
 EXPECTED_ROWS = 777_600
@@ -72,3 +83,33 @@ FIX_RANK = {"NO_FIX": 0, "AUTONOMOUS": 1, "DGPS": 2, "RTK_FLOAT": 3, "RTK_FIXED"
 
 # A minute is working if more 50% of its seconds are working. fixed
 WORKING_MINUTE_SHARE = 0.5
+
+# Scoring rules
+# A detection matches a label only if both overlaps reach these. fixed
+MATCH_TIME_IOU = 0.30
+MATCH_TRACTOR_IOU = 0.50
+# Onset credit is full within this many minutes of the true start. fixed
+ONSET_FULL_MIN = 5
+# Onset credit falls to 0 at this many minutes off. fixed
+ONSET_ZERO_MIN = 60
+# Multipath reports this many minutes or shorter are not false alarms. fixed
+MULTIPATH_EXEMPT_MIN = 3
+
+# Causes and the action for each, in the guide's order. fixed (guide, matches labels)
+ACTIONS = {
+    "SPACE_WEATHER": "HALT_OR_DEGRADED_MODE",
+    "JAMMING": "HALT_AND_REPORT",
+    "SPOOFING": "HALT_CROSSCHECK_AND_REPORT",
+    "EQUIPMENT_FAULT": "SERVICE_MACHINE_OTHERS_CONTINUE",
+    "MULTIPATH": "CONTINUE_FALSE_ALARM",
+}
+
+# Segment settings
+# A minute is bad if its weakest satellite is this far below normal. learned
+BAD_WEAKEST_DROP_DB = 13.0
+# A minute is bad if the tractor strays this far off its line. learned
+BAD_CROSS_TRACK_ERROR_M = 0.50
+# Stretch an episode while the average signal is still this far below normal. learned
+WEAK_MEAN_DROP_DB = 3.0
+# Bad minutes this close together join into one episode. learned
+MAX_GAP_MIN = 3
