@@ -73,3 +73,25 @@ def add_drop_from_normal(minutes: pd.DataFrame, labels: pd.DataFrame) -> pd.Data
     )
     minutes["num_sats_drop"] = minutes["tractor_id"].map(normal_num_sats) - minutes["num_sats_min"]
     return minutes
+
+
+# Add how the other working tractors did in the same minute.
+def add_fleet_comparison(minutes: pd.DataFrame) -> pd.DataFrame:
+    # Only count working tractors for the fleet
+    own_drop = minutes["signal_mean_drop_db"].where(minutes["working"], 0)
+    is_working = minutes["working"].astype(int)
+
+    # Add up the whole fleet each minute
+    fleet_total = own_drop.groupby(minutes["minute"]).transform("sum")
+    fleet_count = is_working.groupby(minutes["minute"]).transform("sum")
+
+    # Average drop of the other working tractors. Blank if no other tractor is working
+    minutes = minutes.copy()
+    others_count = (fleet_count - is_working).replace(0, float("nan"))
+    minutes["others_signal_mean_drop_db"] = (fleet_total - own_drop) / others_count
+
+    # True if another working tractor lost its base link that minute
+    own_lost = (minutes["base_link_lost"] & minutes["working"]).astype(int)
+    fleet_lost = own_lost.groupby(minutes["minute"]).transform("sum")
+    minutes["others_base_link_lost"] = (fleet_lost - own_lost) > 0
+    return minutes
