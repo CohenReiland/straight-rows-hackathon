@@ -9,6 +9,9 @@ TELEMETRY = DATA / "farm" / "tractor_telemetry.csv.gz"
 SPACE_FEEDS = DATA / "sda"
 LABELS = DATA / "labels" / "train_episodes.json"
 
+# Where run.py writes each window's detections
+OUTPUT = {"dev": ROOT / "dev_predictions.json", "eval": ROOT / "submission.json"}
+
 # Rows the telemetry has
 EXPECTED_ROWS = 777_600
 

@@ -3,6 +3,7 @@
 # python -m straightrows.score dev_predictions.json
 
 import json
+import sys
 from pathlib import Path
 
 import pandas as pd
@@ -321,3 +322,8 @@ def report(path: Path) -> dict:
     print(f"Free multipath reports: {result['free_multipath']}")
 
     return result
+
+
+# Score the file given, or the dev predictions if none is given
+if __name__ == "__main__":
+    report(Path(sys.argv[1]) if len(sys.argv) > 1 else config.OUTPUT["dev"])
