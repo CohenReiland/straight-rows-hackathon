@@ -59,3 +59,9 @@ SPACE_FEED_FIELDS = {
         "text": "text",
     },
 }
+
+# Mask settings
+# A tractor is moving above this speed. fixed (real speed is only 0 or 4.5 m/s)
+WORKING_SPEED_MPS = 0.5
+# A row counts as working if the tractor moved within this many seconds of it. fixed
+WORKING_LOOKAROUND_S = 30
