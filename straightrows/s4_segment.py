@@ -76,3 +76,19 @@ def find_runs(
     table = pd.DataFrame(candidates, columns=["tractor", "start", "end"])
     table["kind"] = kind
     return table
+
+
+# Join bad minutes into episodes, one list for each kind.
+def find_candidates(minutes: pd.DataFrame, window: str) -> pd.DataFrame:
+    # Keep the minutes in this window
+    window_start, window_end = config.WINDOWS[window]
+    in_window = minutes[
+        (minutes["minute"] >= window_start) & (minutes["minute"] < window_end)
+    ]
+
+    # Find the link and signal episodes separately
+    link = find_runs(in_window[is_link_bad(in_window)], window_end, "link")
+    signal = find_runs(in_window[is_signal_bad(in_window)], window_end, "signal")
+
+    # Put them in one table
+    return pd.concat([link, signal], ignore_index=True)

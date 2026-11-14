@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pandas as pd
+
 # File locations
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
@@ -11,6 +13,12 @@ LABELS = DATA / "labels" / "train_episodes.json"
 
 # Where run.py writes each window's detections
 OUTPUT = {"dev": ROOT / "dev_predictions.json", "eval": ROOT / "submission.json"}
+
+# Time windows, start included and end left out. fixed (README)
+WINDOWS = {
+    "dev": (pd.Timestamp("2026-05-04T00:00Z"), pd.Timestamp("2026-05-06T00:00Z")),
+    "eval": (pd.Timestamp("2026-05-06T00:00Z"), pd.Timestamp("2026-05-07T00:00Z")),
+}
 
 # Rows the telemetry has
 EXPECTED_ROWS = 777_600
