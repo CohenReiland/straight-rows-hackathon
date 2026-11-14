@@ -144,3 +144,28 @@ def onset_credit(detection: dict, label: dict) -> float:
 
     # Less credit the further off, never below 0
     return max(0.0, (config.ONSET_ZERO_MIN - error_min) / zero_range)
+
+
+# Short multipath reports are not false alarms, unless they overlap a labeled one.
+def is_exempt(detection: dict, labels: list[dict]) -> bool:
+    # Length of the report
+    length_min = (detection["end"] - detection["start"]).total_seconds() / 60
+
+    # Only short multipath reports can be exempt
+    if (
+        detection["class"] != "MULTIPATH"
+        or length_min > config.MULTIPATH_EXEMPT_MIN
+    ):
+        return False
+
+    # Not exempt if it overlaps a labeled multipath on a shared tractor
+    for label in labels:
+        shares_tractor = bool(set(detection["tractors"]) & set(label["tractors"]))
+        if (
+            label["class"] == "MULTIPATH"
+            and time_iou(detection, label) > 0
+            and shares_tractor
+        ):
+            return False
+
+    return True

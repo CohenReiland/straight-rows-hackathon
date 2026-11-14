@@ -81,3 +81,5 @@ MATCH_TRACTOR_IOU = 0.50
 ONSET_FULL_MIN = 5
 # Onset credit falls to 0 at this many minutes off. fixed
 ONSET_ZERO_MIN = 60
+# Multipath reports this many minutes or shorter are not false alarms. fixed
+MULTIPATH_EXEMPT_MIN = 3
